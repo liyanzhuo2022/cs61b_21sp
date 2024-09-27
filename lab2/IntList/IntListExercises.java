@@ -10,7 +10,7 @@ public class IntListExercises {
      */
     public static void addConstant(IntList lst, int c) {
         IntList head = lst;
-        while (head.rest != null) {
+        while (head != null) {
             head.first += c;
             head = head.rest;
         }
@@ -26,7 +26,9 @@ public class IntListExercises {
     public static void setToZeroIfMaxFEL(IntList L) {
         IntList p = L;
         while (p != null) {
-            if (firstDigitEqualsLastDigit(max(p))) {
+            int currentMax = max(p);
+            boolean firstEqualsLast = firstDigitEqualsLastDigit(currentMax);
+            if (firstEqualsLast) {
                 p.first = 0;
             }
             p = p.rest;
@@ -51,7 +53,7 @@ public class IntListExercises {
      */
     public static boolean firstDigitEqualsLastDigit(int x) {
         int lastDigit = x % 10;
-        while (x > 10) {
+        while (x >= 10) {
             x = x / 10;
         }
         int firstDigit = x % 10;
@@ -66,17 +68,39 @@ public class IntListExercises {
      * @return True if there was an update to the list
      */
     public static boolean squarePrimes(IntList lst) {
+        IntList p = lst;
+        boolean hasPrimes = false;
+
+        while (p != null) {
+            if (Primes.isPrime(p.first)) {
+                p.first *= p.first;
+                hasPrimes = true;
+            }
+            p = p.rest;
+        }
+
+        return hasPrimes;
+    }
+
+    public static boolean squarePrimes_rec(IntList lst) {
         // Base Case: we have reached the end of the list
         if (lst == null) {
             return false;
         }
 
+        // 先递归处理剩余部分
+        boolean restUpdated = squarePrimes(lst.rest);
+
+        // 检查当前元素是否是质数
         boolean currElemIsPrime = Primes.isPrime(lst.first);
 
+        // 如果是质数，将其平方
         if (currElemIsPrime) {
             lst.first *= lst.first;
         }
 
-        return currElemIsPrime || squarePrimes(lst.rest);
+        // 返回是否有更新
+        return currElemIsPrime || restUpdated;
     }
+
 }
