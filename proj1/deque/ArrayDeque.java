@@ -50,8 +50,8 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
         T[] newArr = (T[]) new Object[capacity];
 
         int newIndex = capacity / 4;
-        nextFirst = newIndex - 1;
         int itemsIndex = nextIndex(nextFirst);
+        nextFirst = newIndex - 1;
         int counter = size;
         while (counter > 0) {
             newArr[newIndex] = items[itemsIndex];
@@ -111,7 +111,7 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
 
         // check would remove operation make the array too big for current size
         if (items.length >= LONGARRAY && (size - 1) / items.length < 0.25) {
-            resize(size * 2);
+            items = resize(size * 2);
         }
 
         int firstIndex = nextIndex(nextFirst);
@@ -128,7 +128,7 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
         }
 
         if (items.length >= LONGARRAY && (size - 1) / items.length < 0.25) {
-            resize(size * 2);
+            items = resize(size * 2);
         }
 
         int lastIndex = prevIndex(nextLast);
