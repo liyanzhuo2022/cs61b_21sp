@@ -104,6 +104,11 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
     }
 
     public T removeFirst() {
+        // check whether the array is empty
+        if (this.isEmpty()) {
+            return null;
+        }
+
         // check would remove operation make the array too big for current size
         if (items.length >= LONGARRAY && (size - 1) / items.length < 0.25) {
             resize(size * 2);
@@ -118,6 +123,10 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
     }
 
     public T removeLast() {
+        if (this.isEmpty()) {
+            return null;
+        }
+
         if (items.length >= LONGARRAY && (size - 1) / items.length < 0.25) {
             resize(size * 2);
         }
