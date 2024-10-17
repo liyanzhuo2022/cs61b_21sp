@@ -84,10 +84,6 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
         size++;
     }
 
-    public boolean isEmpty() {
-        return (size == 0);
-    }
-
     public int size() {
         return size;
     }
@@ -156,7 +152,7 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
     private class ArrayDequeIterator implements Iterator<T> {
         private int index;
 
-        public ArrayDequeIterator() {
+        ArrayDequeIterator() {
             index = nextIndex(nextFirst);
         }
 
@@ -187,6 +183,7 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
                     return false;
                 }
             }
+            return true;
         }
         return false;
     }

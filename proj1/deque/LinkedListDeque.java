@@ -4,7 +4,7 @@ import java.util.Iterator;
 
 public class LinkedListDeque<T> implements Deque<T>, Iterable<T> {
 
-    public class Node {
+    private class Node {
         Node prev;
         T item;
         Node next;
@@ -40,10 +40,6 @@ public class LinkedListDeque<T> implements Deque<T>, Iterable<T> {
         sentinel.prev.next = last;
         sentinel.prev = last;
         size += 1;
-    }
-
-    public boolean isEmpty() {
-        return sentinel.next == sentinel;
     }
 
     public int size() {
@@ -123,7 +119,7 @@ public class LinkedListDeque<T> implements Deque<T>, Iterable<T> {
     private class LinkedListDequeIterator implements Iterator<T> {
         private Node p;
 
-        public LinkedListDequeIterator() {
+        LinkedListDequeIterator() {
             p = sentinel.next;
         }
 
@@ -143,9 +139,10 @@ public class LinkedListDeque<T> implements Deque<T>, Iterable<T> {
         if (this == o) {
             return true;
         }
+
         if (o instanceof Deque) {
             Deque<T> other = (Deque<T>) o; // java 15 must do the casting
-            if (this.size() == other.size()) {
+            if (this.size() != other.size()) {
                 return false;
             }
             for (int i = 0; i < this.size(); i++) {

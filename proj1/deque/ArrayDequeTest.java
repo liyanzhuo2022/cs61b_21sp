@@ -27,8 +27,6 @@ public class ArrayDequeTest {
             assertEquals(i, (long)ard1.removeFirst());
             assertEquals(i, (long)ard2.removeLast());
         }
-        assertTrue(ard1.isEmpty());
-        assertTrue(ard2.isEmpty());
 
     }
 
@@ -53,8 +51,6 @@ public class ArrayDequeTest {
             assertEquals(i, (long)ard1.removeFirst());
             assertEquals(i, (long)ard2.removeLast());
         }
-        assertTrue(ard1.isEmpty());
-        assertTrue(ard2.isEmpty());
     }
 
     @Test
