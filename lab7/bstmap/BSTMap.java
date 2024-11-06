@@ -141,7 +141,7 @@ public class BSTMap<K extends Comparable<K>, V> implements Map61B<K, V> {
         return size(root);
     }
 
-    public int size(Node x) {
+    private int size(Node x) {
         if (x == null) {
             return 0;
         } else {
@@ -160,7 +160,7 @@ public class BSTMap<K extends Comparable<K>, V> implements Map61B<K, V> {
 
     }
 
-    public Node put(Node x, K key, V value) {
+    private Node put(Node x, K key, V value) {
         if (x == null) {
             return new Node(key, value, 1);
         }
@@ -230,7 +230,7 @@ public class BSTMap<K extends Comparable<K>, V> implements Map61B<K, V> {
         }
     }
 
-    public K min() {
+    private K min() {
         if (keySet().isEmpty()) {
             throw new NoSuchElementException("calls min() with empty symbol table");
         }
@@ -245,7 +245,7 @@ public class BSTMap<K extends Comparable<K>, V> implements Map61B<K, V> {
         }
     }
 
-    public void deleteMin() {
+    private void deleteMin() {
         if (keySet().isEmpty()) {
             throw new NoSuchElementException("calls min() with empty symbol table");
         }
