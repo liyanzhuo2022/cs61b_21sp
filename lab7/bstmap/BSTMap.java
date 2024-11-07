@@ -245,13 +245,6 @@ public class BSTMap<K extends Comparable<K>, V> implements Map61B<K, V> {
         }
     }
 
-    private void deleteMin() {
-        if (keySet().isEmpty()) {
-            throw new NoSuchElementException("calls min() with empty symbol table");
-        }
-
-    }
-
     private Node deleteMin(Node x) {
         if (x.left == null) {
             return x.right;
