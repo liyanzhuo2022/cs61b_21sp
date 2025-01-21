@@ -1,19 +1,26 @@
 package gitlet;
 
 import java.io.File;
+import java.util.HashMap;
+
 import static gitlet.Utils.*;
 
-// TODO: any imports you need here
-
 /** Represents a gitlet repository.
- *  TODO: It's a good idea to give a description here of what else this Class
+ *  It's a good idea to give a description here of what else this Class
  *  does at a high level.
+ *  This is where the main logic of our program lives.
+ *  This class will handle all the gitlet commands through setting up persistence,
+ *  reading/writing from/to the correct file, and additional error checking.
+ *  It will create the ./gitlet folder and sub directories.
+ *  This class defers all the Commit/Blob specific logic to Commit/Blob class,
+ *  like serialization and deserialization.
  *
- *  @author TODO
+ *
+ *
+ *  @author Li Yanzhuo
  */
 public class Repository {
     /**
-     * TODO: add instance variables here.
      *
      * List all instance variables of the Repository class here with a useful
      * comment above them describing what that variable represents and how that
@@ -25,5 +32,122 @@ public class Repository {
     /** The .gitlet directory. */
     public static final File GITLET_DIR = join(CWD, ".gitlet");
 
+    public static File HEAD_FILE = join(GITLET_DIR, "HEAD");
+    public static File index_FILE = join(GITLET_DIR, "index");
+    public static File commits_DIR = join(GITLET_DIR, "commits");
+    public static File blobs_DIR = join(GITLET_DIR, "blobs");
+    public static File refs_DIR = join(GITLET_DIR, "refs");
+    public static File heads_DIR = join(refs_DIR, "heads");
+    public static File master_FILE = join(heads_DIR, "master");
+
+
     /* TODO: fill in the rest of this class. */
+
+    /**The java gitlet.Main init will set up the persistence after checking errors:
+     1.Create the .gitlet folder and the subdirectories if it doesn’t exist.
+     (call .mkdir())
+     2.Commit the initial commit:
+     a./commits will add the initial commit file.
+     b.the reference file HEAD and refs/master will change (the initial commit hash ID).
+     * */
+    static void init() {
+        //error checking: if there is an existing .gitlet folder in the CWD
+        if (GITLET_DIR.exists() && GITLET_DIR.isDirectory()) {
+            throw Utils.error("A Gitlet version-control system already exists " +
+                    "in the current directory.");
+        }
+        GITLET_DIR.mkdir();
+
+        commits_DIR.mkdir();
+        blobs_DIR.mkdir();
+        refs_DIR.mkdir();
+        heads_DIR.mkdir();
+
+        makeInitCommit();
+    }
+
+    /**This helper method will create an initial commit object,
+     * write it into the commits_DIR (a file under its subdirectory),
+     * and initialize the master file, HEAD file.*/
+    private static void makeInitCommit() {
+        String message = "initial commit";
+        Commit initCommit = new Commit(message);
+        initCommit.writeCommitIntoFile();
+
+        // initialize master file
+        String commitID = initCommit.getCommitID();
+        Utils.writeContents(master_FILE, commitID);
+        // initialize HEAD file
+        writeContents(HEAD_FILE, "ref: refs/heads/master");
+        // initialize staging area
+        HashMap<String, String> files = new HashMap<>();
+        writeObjectIntoIndex(files);
+    }
+
+    /**The java gitlet.Main add [file name] modifies the staging area(/index)
+     * and create and save blob objects(/blobs).
+     * */
+    static void add(String fileName) {
+        File file = Utils.join(CWD, fileName);
+        if (!file.exists()) {
+            throw Utils.error("File does not exist.");
+        }
+
+        Blob blob = new Blob(file);
+        String blobID = blob.getHashID();
+        String commitID = getHEADcommitID();
+        Commit commit = Commit.readCommitFromFile(commitID);
+        HashMap<String, String> stagedFile = readObjectFromIndex();
+
+        if (commit.containsBlob(fileName, blobID)) {
+            stagedFile.remove(fileName);
+        } else {
+            stagedFile.put(fileName, blobID);
+            blob.writeBlobIntoFile();
+        }
+        writeObjectIntoIndex(stagedFile);
+    }
+
+    static void commit(String message) {
+        // TODO
+        System.out.println("create commit with message: "+ message);
+    }
+
+
+    /* This is a helper method to get the commit ID pointed by the HEAD.*/
+    private static String getHEADcommitID() {
+        String HEADcontent = Utils.readContentsAsString(HEAD_FILE);
+        if (HEADcontent.length() < 6) {
+            throw error("HEAD file content is invalid: " + HEADcontent);
+        }
+
+        String firstLetters = HEADcontent.substring(0,4);
+        if (firstLetters.equals("ref:")) {
+            String path = HEADcontent.substring(5);
+            File headFile = Utils.join(GITLET_DIR, path);
+            String hashID = Utils.readContentsAsString(headFile);
+            return hashID;
+        } else {
+            return HEADcontent;
+        }
+    }
+
+    /* Methods related to staging area. */
+
+    /* Persistence: this is a helper method for write the map object into index file. */
+    private static void writeObjectIntoIndex(HashMap<String, String> files) {
+        writeObject(index_FILE, files);
+    }
+
+    /* Persistence: this is a helper method for read the map object from the index file. */
+    private static HashMap<String, String> readObjectFromIndex() {
+        HashMap<String, String> files = Utils.readObject(index_FILE, HashMap.class);
+        return files;
+    }
+
+    private static boolean stagingAreaContainsBlob(String fileName, String blobID) {
+        HashMap<String, String> stagingFiles = readObjectFromIndex();
+        String trackedBlob = stagingFiles.get(fileName);
+        return trackedBlob != null && blobID.equals(trackedBlob);
+    }
 }

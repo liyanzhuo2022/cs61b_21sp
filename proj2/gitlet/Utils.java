@@ -191,14 +191,14 @@ class Utils {
     /* OTHER FILE UTILITIES */
 
     /** Return the concatentation of FIRST and OTHERS into a File designator,
-     *  analogous to the {@link java.nio.file.Paths.#get(String, String[])}
+     *  analogous to the {@link java.nio.file.Paths#get(String, String[])}
      *  method. */
     static File join(String first, String... others) {
         return Paths.get(first, others).toFile();
     }
 
     /** Return the concatentation of FIRST and OTHERS into a File designator,
-     *  analogous to the {@link java.nio.file.Paths.#get(String, String[])}
+     *  analogous to the {@link java.nio.file.Paths#get(String, String[])}
      *  method. */
     static File join(File first, String... others) {
         return Paths.get(first.getPath(), others).toFile();
@@ -235,5 +235,17 @@ class Utils {
     static void message(String msg, Object... args) {
         System.out.printf(msg, args);
         System.out.println();
+    }
+
+
+    /* METHOD ADDED BY ME @author: Li Yanzhuo */
+
+    /* Return true if the directory is empty, false if it is not. */
+    static boolean isEmptyDirectory(File dir) {
+        if (dir.exists() && dir.isDirectory()) {
+            String[] contents = dir.list();
+            return contents == null || contents.length == 0;
+        }
+        return false;
     }
 }
