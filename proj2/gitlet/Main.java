@@ -19,29 +19,49 @@ public class Main {
 
         String firstArg = args[0];
         switch(firstArg) {
-            case "init":
+            case "init": {
                 Repository.init();
                 break;
-            case "add":
+            }
+            case "add": {
                 if (args.length != 2) {
                     throw Utils.error("Must have 2 arguments");
                 }
                 String fileName = args[1];
                 Repository.add(fileName);
                 break;
-            case "commit":
+            }
+            case "commit": {
                 if (args.length == 1) {
                     throw Utils.error("Please enter a commit message.");
                 }
-                StringBuilder messageBuilder = new StringBuilder();
-                for (int i = 1; i < args.length; i++) {
-                    messageBuilder.append(args[i]);
-                    if (i < args.length - 1) {
-                        messageBuilder.append(" ");
-                    }
+                if (args.length > 2) {
+                    throw Utils.error("Please quote the commit message.");
                 }
-                String message = messageBuilder.toString();
+                String message = args[1];
+                if ((message.startsWith("\"") && message.endsWith("\"")) ||
+                        (message.startsWith("'") && message.endsWith("'"))) {
+                    message = message.substring(1, message.length() - 1);
+                }
                 Repository.commit(message);
+                break;
+            }
+            case "rm": {
+                if (args.length == 1) {
+                    throw Utils.error("Please enter the file name.");
+                }
+                if (args.length > 2) {
+                    throw Utils.error("Please enter just one file.");
+                }
+                String fileName = args[1];
+                Repository.rm(fileName);
+                break;
+            }
+            case "log": {
+                Repository.log();
+            }
+
+
 
             // TODO: FILL THE REST IN
         }

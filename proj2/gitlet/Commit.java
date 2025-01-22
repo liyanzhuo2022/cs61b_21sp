@@ -1,9 +1,11 @@
 package gitlet;
 
-// TODO: any imports you need here
-
 import java.io.File;
 import java.io.Serializable;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -40,7 +42,6 @@ public class Commit implements Serializable {
     private long timestamp;
     private Map<String, String> files = new HashMap<>(); // store the filename and blobs
 
-    /* TODO: fill in the rest of this class. */
 
     /**Methods that a commit class should have:
      * 1.constructor
@@ -48,7 +49,7 @@ public class Commit implements Serializable {
      * 3.read a commit from file */
 
 
-    /**This method is the constructor for the initial commit(???). */
+    /**This method is the constructor for the initial commit. */
     Commit(String message) {
         this.message = message;
         // init commit
@@ -59,6 +60,65 @@ public class Commit implements Serializable {
             throw Utils.error("This constructor is solely for initial commit. " +
                     "More information about this commit needed.");
         }
+    }
+
+    /* Constructor for normal commits. */
+    Commit(String message, Commit curCommit) {
+        this.message = message;
+        this.timestamp = Instant.now().getEpochSecond();
+        this.firstParentID = curCommit.hashID;
+
+        this.files = new HashMap<>(curCommit.files); // shallow copy, for kv are String
+        HashMap<String,String> stagingFiles = Repository.readObjectFromIndex();
+        if (stagingFiles.isEmpty()) {
+            throw Utils.error("No changes added to the commit.");
+        }
+        for (Map.Entry<String, String> entry: stagingFiles.entrySet()) {
+            if (entry.getValue().equals("REMOVE")) {
+                this.files.remove(entry.getKey());
+            } else {
+                this.files.put(entry.getKey(), entry.getValue());
+            }
+        }
+
+        this.hashID = generateHashID();
+    }
+
+    /* Return the hashID of the commit.*/
+    String getCommitID() {
+        return this.hashID;
+    }
+
+    Map getFiles() {
+        HashMap<String, String> files = new HashMap<>(this.files);
+        return files;
+    }
+
+    String getFirstParentID() {
+        return this.firstParentID;
+    }
+
+    String getLog() {
+        String entry = "===";
+        String commitID = "commit " + this.hashID;
+        String merge = "";
+        if (this.secondParentID != null) {
+            String firstParentID_short = firstParentID.substring(0,6);
+            String secondParentID_short = secondParentID.substring(0,6);
+            merge = "Merge: " + firstParentID_short + " " + secondParentID_short;
+        }
+        String date = this.formatTimeStamp();
+
+        StringBuilder logBuilder = new StringBuilder();
+        logBuilder.append(entry).append("\n")
+                .append(commitID).append("\n");
+        if (!merge.isEmpty()) {
+            logBuilder.append(merge).append("\n");
+        }
+        logBuilder.append(date).append("\n")
+                .append(this.message).append("\n\n");
+
+        return logBuilder.toString();
     }
 
     /**Persistence: a method that writes the commit object into file,
@@ -75,11 +135,6 @@ public class Commit implements Serializable {
             throw Utils.error("Same commit file already exists.");
         }
         Utils.writeObject(commit_FILE, this);
-    }
-
-    /* Return the hashID of the commit.*/
-    String getCommitID() {
-        return this.hashID;
     }
 
     /**Persistence: Given the commit ID, this method returns the commit object
@@ -103,6 +158,12 @@ public class Commit implements Serializable {
         return trackedBlob != null && (blobID.equals(trackedBlob));
     }
 
+    String formatTimeStamp() {
+        ZonedDateTime zonedDateTime = Instant.ofEpochSecond(timestamp)
+                .atZone(ZoneId.systemDefault());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss yyyy Z");
+        return "Date: " + zonedDateTime.format(formatter);
+    }
 
     /**A helper method that generate the hashID of a commit.
      * files, timestamp, message distinguish commits from each other. */
@@ -122,5 +183,4 @@ public class Commit implements Serializable {
         }
         return sb.toString();
     }
-
 }

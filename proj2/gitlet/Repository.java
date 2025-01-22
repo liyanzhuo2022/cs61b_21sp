@@ -86,6 +86,10 @@ public class Repository {
 
     /**The java gitlet.Main add [file name] modifies the staging area(/index)
      * and create and save blob objects(/blobs).
+     * First, create blob object abc.
+     * Then, compare the hash ID of blob abc in with the current commit (HEAD):
+     * if the blob is tracked by current commit, remove it from staging area;
+     * else, put it into the staging area and save the blob into file system.
      * */
     static void add(String fileName) {
         File file = Utils.join(CWD, fileName);
@@ -108,9 +112,85 @@ public class Repository {
         writeObjectIntoIndex(stagedFile);
     }
 
+    /**The java gitlet.Main commit [message] modifies the staging area (/index)
+     * and /commit. [includes error checking]
+     1.it should create a new commit
+     2. it will clean the staging area
+     3. it will change the references.
+     */
     static void commit(String message) {
-        // TODO
-        System.out.println("create commit with message: "+ message);
+        Commit curCommit = Commit.readCommitFromFile(getHEADcommitID()); // the current commit pointed by HEAD
+        Commit newCommit = new Commit(message, curCommit);
+        newCommit.writeCommitIntoFile();
+        HashMap<String, String> emptyMap = new HashMap<>();
+        writeObjectIntoIndex(emptyMap);
+        updatePointers(newCommit.getCommitID());
+    }
+
+    /**The java gitlet.Main rm [file name] modifies the staging area,
+     * /commit and the working directory.
+     1.check if the file is in staging area -- yes -- unstage the file: delete the key-value pair from the staging area (a map)
+     2.check if the file is in current commit (HEAD) -- yes
+     -- stage for removal: add the key-value pair to the staging area (a map), maybe assign the value as None or “REMOVE” as a label. [ps. the commit command will clean all the staging area after creating new commit]
+     --check if the file is in the working directory -- yes -- delete it from the working directory (using Utils)
+     3.if it is neither in staging area nor in current commit, print an error message.*/
+    static void rm(String fileName) {
+        HashMap<String, String> stagingMap = readObjectFromIndex();
+        boolean trackedByStagingArea = stagingMap.containsKey(fileName);
+        if (trackedByStagingArea) {
+            stagingMap.remove(fileName);
+        }
+
+        Commit curCommit = getCurCommit();
+        boolean trackedByCurCommit = curCommit.getFiles().containsKey(fileName);
+        if (trackedByCurCommit) {
+            stagingMap.put(fileName, "REMOVE");
+
+            File rm_FILE = Utils.join(CWD, fileName);
+            Utils.restrictedDelete(rm_FILE);
+        }
+
+        if (!trackedByStagingArea && !trackedByCurCommit) {
+            throw Utils.error("No reason to remove the file.");
+        }
+
+        writeObjectIntoIndex(stagingMap);
+    }
+
+    static void log() {
+        StringBuilder logMessage = new StringBuilder();
+        Commit curCommit = getCurCommit();
+        log_helper(logMessage, curCommit);
+        System.out.println(logMessage);
+    }
+
+    private static void log_helper(StringBuilder logMessage, Commit curCommit) {
+        logMessage.append(curCommit.getLog());
+        if (curCommit.getFirstParentID() != null) {
+            Commit nextCommit = Commit.readCommitFromFile(curCommit.getFirstParentID());
+            log_helper(logMessage, nextCommit);
+        }
+    }
+
+    private static Commit getCurCommit() {
+        return Commit.readCommitFromFile(getHEADcommitID());
+    }
+
+    private static void updatePointers(String newCommitID) {
+        String HEADcontent = Utils.readContentsAsString(HEAD_FILE);
+        if (HEADcontent.length() < 6) {
+            throw error("HEAD file content is invalid: " + HEADcontent);
+        }
+
+        String firstLetters = HEADcontent.substring(0,4);
+        if (firstLetters.equals("ref:")) {
+            String path = HEADcontent.substring(5).trim();
+            File headFile = Utils.join(GITLET_DIR, path);
+            Utils.writeContents(headFile, newCommitID);
+        } else {
+            // detached
+            Utils.writeContents(HEAD_FILE, newCommitID);
+        }
     }
 
 
@@ -123,7 +203,7 @@ public class Repository {
 
         String firstLetters = HEADcontent.substring(0,4);
         if (firstLetters.equals("ref:")) {
-            String path = HEADcontent.substring(5);
+            String path = HEADcontent.substring(5).trim();
             File headFile = Utils.join(GITLET_DIR, path);
             String hashID = Utils.readContentsAsString(headFile);
             return hashID;
@@ -140,7 +220,7 @@ public class Repository {
     }
 
     /* Persistence: this is a helper method for read the map object from the index file. */
-    private static HashMap<String, String> readObjectFromIndex() {
+    static HashMap<String, String> readObjectFromIndex() {
         HashMap<String, String> files = Utils.readObject(index_FILE, HashMap.class);
         return files;
     }
