@@ -59,6 +59,58 @@ public class Main {
             }
             case "log": {
                 Repository.log();
+                break;
+            }
+            case "global-log": {
+                Repository.globalLog();
+                break;
+            }
+            case "find": {
+                if (args.length == 1) {
+                    throw Utils.error("Please enter a commit message.");
+                }
+                if (args.length > 2) {
+                    throw Utils.error("Please quote the commit message.");
+                }
+                String message = args[1];
+                if ((message.startsWith("\"") && message.endsWith("\"")) ||
+                        (message.startsWith("'") && message.endsWith("'"))) {
+                    message = message.substring(1, message.length() - 1);
+                }
+                Repository.find(message);
+                break;
+            }
+            case "status": {
+                Repository.status();
+                break;
+            }
+            case "checkout": {
+                // java gitlet.Main checkout -- [file name]
+                if (args.length == 2) {
+                    if (!args[0].equals("--")) {
+                        throw Utils.error("Wrong formatting.");
+                    }
+                    String fileName = args[1];
+                    Repository.checkoutFileName(fileName);
+                    break;
+                }
+                // java gitlet.Main checkout [commit id] -- [file name]
+                if (args.length == 3) {
+                    if (!args[1].equals("--")) {
+                        throw Utils.error("Wrong formatting.");
+                    }
+                    String commitID = args[0];
+                    String fileName = args[2];
+                    Repository.checkoutCommitID(commitID, fileName);
+                    break;
+                }
+                // java gitlet.Main checkout [branch name]
+                if (args.length == 1) {
+                    String branchName = args[0];
+                    Repository.checkoutBranch(branchName);
+                    break;
+                }
+                throw Utils.error("Wrong formatting.");
             }
 
 

@@ -89,13 +89,21 @@ public class Commit implements Serializable {
         return this.hashID;
     }
 
-    Map getFiles() {
+    HashMap<String, String> getFiles() {
         HashMap<String, String> files = new HashMap<>(this.files);
         return files;
     }
 
     String getFirstParentID() {
         return this.firstParentID;
+    }
+
+    String getSecondParentID() {
+        return this.secondParentID;
+    }
+
+    String getMessage() {
+        return this.message;
     }
 
     String getLog() {
@@ -148,7 +156,7 @@ public class Commit implements Serializable {
             Commit commit = Utils.readObject(commit_FILE, Commit.class);
             return commit;
         } else {
-            throw Utils.error("Can't find the subdirectory of the commit: "+ commitID);
+            throw Utils.error("No commit with that id exists.");
         }
     }
 

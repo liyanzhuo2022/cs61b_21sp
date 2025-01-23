@@ -62,8 +62,4 @@ public class Blob implements Serializable {
             throw Utils.error("Can't find the subdirectory of the blob: "+ blobID);
         }
     }
-
-
-
-
 }
