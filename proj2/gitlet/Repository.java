@@ -56,8 +56,9 @@ public class Repository {
     static void init() {
         //error checking: if there is an existing .gitlet folder in the CWD
         if (GITLET_DIR.exists() && GITLET_DIR.isDirectory()) {
-            throw Utils.error("A Gitlet version-control system already exists " +
+            System.out.println("A Gitlet version-control system already exists " +
                     "in the current directory.");
+            System.exit(0);
         }
         GITLET_DIR.mkdir();
 
@@ -97,7 +98,8 @@ public class Repository {
     static void add(String fileName) {
         File file = Utils.join(CWD, fileName);
         if (!file.exists()) {
-            throw Utils.error("File does not exist.");
+            System.out.println("File does not exist.");
+            System.exit(0);
         }
 
         Blob blob = new Blob(file);
@@ -154,7 +156,8 @@ public class Repository {
         }
 
         if (!trackedByStagingArea && !trackedByCurCommit) {
-            throw Utils.error("No reason to remove the file.");
+            System.out.println("No reason to remove the file.");
+            System.exit(0);
         }
 
         writeObjectIntoIndex(stagingMap);
@@ -182,28 +185,39 @@ public class Repository {
     /**Like log, except displays information about all commits ever made.
      * The order of the commits does not matter. */
     static void globalLog() {
-        List<String> commitIDs = Utils.plainFilenamesIn(commits_DIR);
-        StringBuilder logMessage = new StringBuilder();
-        for (String commitID : commitIDs) {
-            Commit commit = Commit.load(commitID);
-            logMessage.append(commit.getLog());
+        File[] subDirs = commits_DIR.listFiles();
+        if (subDirs != null) {
+            for (File subDir : subDirs) {
+                List<String> commitIDs = Utils.plainFilenamesIn(subDir);
+                for (String commitID : commitIDs) {
+                    Commit commit = Commit.load(commitID);
+                    System.out.println(commit.getLog());
+                }
+            }
         }
-        System.out.println(logMessage);
     }
 
     /**Prints out the ids of all commits that have the given commit message, one per line.
      * If there are multiple such commits, it prints the ids out on separate lines.*/
     static void find(String message) {
-        List<String> commitIDs = Utils.plainFilenamesIn(commits_DIR);
         StringBuilder findMessage = new StringBuilder();
-        for (String commitID : commitIDs) {
-            Commit commit = Commit.load(commitID);
-            if (commit.getMessage().equals(message)) {
-                findMessage.append(commit.getCommitID()).append("\n");
+        File[] subDirs = commits_DIR.listFiles();
+        if (subDirs != null) {
+            for (File subDir : subDirs) {
+                List<String> commitIDs = Utils.plainFilenamesIn(subDir);
+                for (String commitID : commitIDs) {
+                    Commit commit = Commit.load(commitID);
+                    if (commit.getMessage().equals(message)) {
+                        findMessage.append(commit.getCommitID()).append("\n");
+                    }
+                }
+
             }
         }
-        if (findMessage == null) {
-            throw Utils.error("Found no commit with that message.");
+
+        if (findMessage.isEmpty()) {
+            System.out.println("Found no commit with that message.");
+            System.exit(0);
         }
         System.out.println(findMessage);
     }
@@ -378,7 +392,8 @@ public class Repository {
         HashMap<String, String> commitFiles = commit.getFiles();
         // check error
         if (!commitFiles.containsKey(fileName)) {
-            throw Utils.error("File does not exist in that commit.");
+            System.out.println("File does not exist in that commit.");
+            System.exit(0);
         }
 
         String blobID = commitFiles.get(fileName);
@@ -393,12 +408,14 @@ public class Repository {
         // error checking
         List<String> branchNames = Utils.plainFilenamesIn(heads_DIR);
         if (!branchNames.contains(branchName)) {
-            throw Utils.error("No such branch exists.");
+            System.out.println("No such branch exists.");
+            System.exit(0);
         }
 
         String currentBranchName = getCurrentBranchName();
         if (currentBranchName.equals(branchName)) {
-            throw Utils.error("No need to checkout the current branch.");
+            System.out.println("No need to checkout the current branch.");
+            System.exit(0);
         }
         Commit targetCommit = getCommitFromBranch(branchName);
         HashMap<String,String> targetMap = targetCommit.getFiles();
@@ -411,8 +428,9 @@ public class Repository {
         for (String fileName : working_DIR_files.keySet()) {
             if (!stagingMap.containsKey(fileName) && !commitMap.containsKey(fileName)
                     && targetMap.containsKey(fileName)) {
-                throw Utils.error("There is an untracked file in the way; " +
+                System.out.println("There is an untracked file in the way; " +
                         "delete it, or add and commit it first.");
+                System.exit(0);
             }
         }
 

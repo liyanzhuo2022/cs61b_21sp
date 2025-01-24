@@ -40,15 +40,19 @@ public class Blob implements Serializable {
      * in the subdirectory by its first 2 id numbers - Hash Table. */
     void save() {
         if (this.hashID == null || hashID.length() < 2) {
-            throw Utils.error("HashID of the blob is shorter than 2.");
+            System.out.println("HashID of the blob is shorter than 2.");
+            System.exit(0);
         }
         String firstTwoID = this.hashID.substring(0,2);
         File subDir = Utils.join(BLOB_DIR, firstTwoID);
         subDir.mkdir(); // mkdir() will check whether the dir exists
         File blob_FILE = Utils.join(subDir, this.hashID);
+        /**
         if (blob_FILE.exists()) {
-            throw Utils.error("Same blob file already exists.");
+            System.out.println("Same blob file already exists.");
+            System.exit(0);
         }
+         */
         Utils.writeObject(blob_FILE, this);
     }
 

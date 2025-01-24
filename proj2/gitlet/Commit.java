@@ -57,8 +57,9 @@ public class Commit implements Serializable {
             this.timestamp = 0L;
             this.hashID = this.generateHashID();
         } else {
-            throw Utils.error("This constructor is solely for initial commit. " +
+            System.out.println("This constructor is solely for initial commit. " +
                     "More information about this commit needed.");
+            System.exit(0);
         }
     }
 
@@ -71,7 +72,8 @@ public class Commit implements Serializable {
         this.files = new HashMap<>(curCommit.files); // shallow copy, for kv are String
         HashMap<String,String> stagingFiles = Repository.readObjectFromIndex();
         if (stagingFiles.isEmpty()) {
-            throw Utils.error("No changes added to the commit.");
+            System.out.println("No changes added to the commit.");
+            System.exit(0);
         }
         for (Map.Entry<String, String> entry: stagingFiles.entrySet()) {
             if (entry.getValue().equals("REMOVE")) {
@@ -133,14 +135,16 @@ public class Commit implements Serializable {
      * in the subdirectory by its first 2 id numbers - Hash Table. */
     void save() {
         if (this.hashID == null || hashID.length() < 2) {
-            throw Utils.error("HashID of the commit is shorter than 2.");
+           System.out.println("HashID of the commit is shorter than 2.");
+           System.exit(0);
         }
         String firstTwoID = this.hashID.substring(0,2);
         File subDir = Utils.join(COMMIT_DIR, firstTwoID);
         subDir.mkdir(); // mkdir() will check whether the dir exists
         File commit_FILE = Utils.join(subDir, this.hashID); // the commit file use hashID as file name
         if (commit_FILE.exists()) {
-            throw Utils.error("Same commit file already exists.");
+            System.out.println("Same commit file already exists.");
+            System.exit(0);
         }
         Utils.writeObject(commit_FILE, this);
     }
@@ -156,7 +160,9 @@ public class Commit implements Serializable {
             Commit commit = Utils.readObject(commit_FILE, Commit.class);
             return commit;
         } else {
-            throw Utils.error("No commit with that id exists.");
+            System.out.println("No commit with that id exists.");
+            System.exit(0);
+            return null;
         }
     }
 

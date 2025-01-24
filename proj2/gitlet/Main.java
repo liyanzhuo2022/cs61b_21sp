@@ -14,7 +14,8 @@ public class Main {
     public static void main(String[] args) {
         // what if args is empty?
         if (args.length == 0) {
-            throw Utils.error("Must have at least one argument.");
+            System.out.println("Incorrect operands.");
+            System.exit(0);
         }
 
         String firstArg = args[0];
@@ -25,20 +26,24 @@ public class Main {
             }
             case "add": {
                 if (args.length != 2) {
-                    throw Utils.error("Must have 2 arguments");
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
                 }
                 String fileName = args[1];
                 Repository.add(fileName);
                 break;
             }
             case "commit": {
-                if (args.length == 1) {
-                    throw Utils.error("Please enter a commit message.");
+                if (args.length == 1 || args[1].equals("")) {
+                    System.out.println("Please enter a commit message.");
+                    System.exit(0);
                 }
                 if (args.length > 2) {
-                    throw Utils.error("Please quote the commit message.");
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
                 }
                 String message = args[1];
+
                 if ((message.startsWith("\"") && message.endsWith("\"")) ||
                         (message.startsWith("'") && message.endsWith("'"))) {
                     message = message.substring(1, message.length() - 1);
@@ -48,10 +53,12 @@ public class Main {
             }
             case "rm": {
                 if (args.length == 1) {
-                    throw Utils.error("Please enter the file name.");
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
                 }
                 if (args.length > 2) {
-                    throw Utils.error("Please enter just one file.");
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
                 }
                 String fileName = args[1];
                 Repository.rm(fileName);
@@ -67,10 +74,12 @@ public class Main {
             }
             case "find": {
                 if (args.length == 1) {
-                    throw Utils.error("Please enter a commit message.");
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
                 }
                 if (args.length > 2) {
-                    throw Utils.error("Please quote the commit message.");
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
                 }
                 String message = args[1];
                 if ((message.startsWith("\"") && message.endsWith("\"")) ||
@@ -86,31 +95,34 @@ public class Main {
             }
             case "checkout": {
                 // java gitlet.Main checkout -- [file name]
-                if (args.length == 2) {
-                    if (!args[0].equals("--")) {
-                        throw Utils.error("Wrong formatting.");
+                if (args.length == 3) {
+                    if (!args[1].equals("--")) {
+                        System.out.println("Incorrect operands.");
+                        System.exit(0);
                     }
-                    String fileName = args[1];
+                    String fileName = args[2];
                     Repository.checkoutFileName(fileName);
                     break;
                 }
                 // java gitlet.Main checkout [commit id] -- [file name]
-                if (args.length == 3) {
-                    if (!args[1].equals("--")) {
-                        throw Utils.error("Wrong formatting.");
+                if (args.length == 4) {
+                    if (!args[2].equals("--")) {
+                        System.out.println("Incorrect operands.");
+                        System.exit(0);
                     }
-                    String commitID = args[0];
-                    String fileName = args[2];
+                    String commitID = args[1];
+                    String fileName = args[3];
                     Repository.checkoutCommitID(commitID, fileName);
                     break;
                 }
                 // java gitlet.Main checkout [branch name]
-                if (args.length == 1) {
-                    String branchName = args[0];
+                if (args.length == 2) {
+                    String branchName = args[1];
                     Repository.checkoutBranch(branchName);
                     break;
                 }
-                throw Utils.error("Wrong formatting.");
+                System.out.println("Incorrect operands.");
+                System.exit(0);
             }
 
 
