@@ -131,7 +131,7 @@ public class Commit implements Serializable {
 
     /**Persistence: a method that writes the commit object into file,
      * in the subdirectory by its first 2 id numbers - Hash Table. */
-    void writeCommitIntoFile() {
+    void save() {
         if (this.hashID == null || hashID.length() < 2) {
             throw Utils.error("HashID of the commit is shorter than 2.");
         }
@@ -148,7 +148,7 @@ public class Commit implements Serializable {
     /**Persistence: Given the commit ID, this method returns the commit object
      * read from the files. It enters the subdirectory first, as the commits
      * distribute as in a hash table. */
-    static Commit readCommitFromFile(String commitID) {
+    static Commit load(String commitID) {
         String firstTwoID = commitID.substring(0,2);
         File subDir = Utils.join(COMMIT_DIR, firstTwoID);
         if (subDir.exists() && subDir.isDirectory()) {

@@ -75,7 +75,7 @@ public class Repository {
     private static void makeInitCommit() {
         String message = "initial commit";
         Commit initCommit = new Commit(message);
-        initCommit.writeCommitIntoFile();
+        initCommit.save();
 
         // initialize master file
         String commitID = initCommit.getCommitID();
@@ -103,14 +103,14 @@ public class Repository {
         Blob blob = new Blob(file);
         String blobID = blob.getHashID();
         String commitID = getHEADcommitID();
-        Commit commit = Commit.readCommitFromFile(commitID);
+        Commit commit = Commit.load(commitID);
         HashMap<String, String> stagedFile = readObjectFromIndex();
 
         if (commit.containsBlob(fileName, blobID)) {
             stagedFile.remove(fileName);
         } else {
             stagedFile.put(fileName, blobID);
-            blob.writeBlobIntoFile();
+            blob.save();
         }
         writeObjectIntoIndex(stagedFile);
     }
@@ -122,9 +122,9 @@ public class Repository {
      3. it will change the references.
      */
     static void commit(String message) {
-        Commit curCommit = Commit.readCommitFromFile(getHEADcommitID()); // the current commit pointed by HEAD
+        Commit curCommit = Commit.load(getHEADcommitID()); // the current commit pointed by HEAD
         Commit newCommit = new Commit(message, curCommit);
-        newCommit.writeCommitIntoFile();
+        newCommit.save();
         HashMap<String, String> emptyMap = new HashMap<>();
         writeObjectIntoIndex(emptyMap);
         updatePointers(newCommit.getCommitID());
@@ -174,7 +174,7 @@ public class Repository {
     private static void log_helper(StringBuilder logMessage, Commit curCommit) {
         logMessage.append(curCommit.getLog());
         if (curCommit.getFirstParentID() != null) {
-            Commit nextCommit = Commit.readCommitFromFile(curCommit.getFirstParentID());
+            Commit nextCommit = Commit.load(curCommit.getFirstParentID());
             log_helper(logMessage, nextCommit);
         }
     }
@@ -185,7 +185,7 @@ public class Repository {
         List<String> commitIDs = Utils.plainFilenamesIn(commits_DIR);
         StringBuilder logMessage = new StringBuilder();
         for (String commitID : commitIDs) {
-            Commit commit = Commit.readCommitFromFile(commitID);
+            Commit commit = Commit.load(commitID);
             logMessage.append(commit.getLog());
         }
         System.out.println(logMessage);
@@ -197,7 +197,7 @@ public class Repository {
         List<String> commitIDs = Utils.plainFilenamesIn(commits_DIR);
         StringBuilder findMessage = new StringBuilder();
         for (String commitID : commitIDs) {
-            Commit commit = Commit.readCommitFromFile(commitID);
+            Commit commit = Commit.load(commitID);
             if (commit.getMessage().equals(message)) {
                 findMessage.append(commit.getCommitID()).append("\n");
             }
@@ -223,7 +223,7 @@ public class Repository {
 
         // get current branch
         boolean detached = true;
-        String currentBranch = getCurrentBranch();
+        String currentBranch = getCurrentBranchName();
         if (currentBranch != null) {
             detached = false;
         }
@@ -240,7 +240,7 @@ public class Repository {
         System.out.println();
     }
 
-    private static String getCurrentBranch() {
+    private static String getCurrentBranchName() {
         String currentBranch = null;
         String HEADcontent = Utils.readContentsAsString(HEAD_FILE);
         if (HEADcontent.length() < 6) {
@@ -253,7 +253,6 @@ public class Repository {
         }
         return currentBranch;
     }
-
 
     private static void printStagedAndRemovedFiles() {
         TreeSet<String> stagedFiles = new TreeSet<>();
@@ -293,31 +292,19 @@ public class Repository {
         Commit currentCommit = getCurCommit();
         HashMap<String, String> commitMap = currentCommit.getFiles();
         HashMap<String, String> stagingMap = readObjectFromIndex();
-
-        List<String> CWD_files = Utils.plainFilenamesIn(CWD);
-        HashMap<String, String> working_DIR_files = new HashMap<>();
-        for (String fileName: CWD_files) {
-            File file = Utils.join(CWD, fileName);
-            if (file.isFile()) {
-                Blob blob = new Blob(file);
-                String blobID = blob.getHashID();
-                working_DIR_files.put(fileName, blobID);
-            }
-        }
+        HashMap<String, String> working_DIR_files = getWorkingDirFiles();
 
         TreeSet<String> modifiedFiles = new TreeSet<>();
 
         for (Map.Entry<String, String> entry : commitMap.entrySet()) {
             String fileName = entry.getKey();
             String commit_BlobID = entry.getValue();
-
             // Tracked in the current commit, changed in the working directory, but not staged
             if ((working_DIR_files.containsKey(fileName)
                     && !working_DIR_files.get(fileName).equals(commit_BlobID))
                     && !stagingMap.containsKey(fileName)) {
                 modifiedFiles.add(fileName + " (modified)");
             }
-
             // Not staged for removal, but tracked in the current commit and deleted from the working directory.
             if (!working_DIR_files.containsKey(fileName)
                     && (!stagingMap.containsKey(fileName)
@@ -329,14 +316,11 @@ public class Repository {
         for (Map.Entry<String, String> entry: stagingMap.entrySet()) {
             String fileName = entry.getKey();
             String staging_BlobID = entry.getValue();
-
             if (!staging_BlobID.equals("REMOVE")) {
-
                 // Staged for addition, but deleted in the working directory
                 if (!working_DIR_files.containsKey(fileName)) {
                     modifiedFiles.add(fileName + " (deleted)");
                 }
-
                 // Staged for addition, but with different contents than in the working directory
                 if (!working_DIR_files.get(fileName).equals(staging_BlobID)) {
                     modifiedFiles.add(fileName + " (modified)");
@@ -384,10 +368,12 @@ public class Repository {
      * The new version of the file is not staged.*/
     static void checkoutCommitID(String commitID, String fileName) {
         // check error is handled in Commit class
-        Commit target = Commit.readCommitFromFile(commitID);
+        Commit target = Commit.load(commitID);
         checkoutFile(fileName, target);
     }
 
+    /**Takes the version of the file as it exists in the given commit,
+     * and puts it in the working directory. */
     private static void checkoutFile(String fileName, Commit commit) {
         HashMap<String, String> commitFiles = commit.getFiles();
         // check error
@@ -396,25 +382,93 @@ public class Repository {
         }
 
         String blobID = commitFiles.get(fileName);
-        Blob blob = Blob.readBlobFromFile(blobID);
-        File fileInCWD = Utils.join(CWD, fileName);
-        Utils.writeContents(fileInCWD, blob);
+        Blob.copyContentToFile(fileName, blobID);
     }
 
+    /**All the files in the target branch, no matter whether exit in current working dir,
+     * would be written into the working dir.
+     * All the files tracked in the working dir would be overwritten or deleted;
+     * untracked files, if not being overwritten, would be reserved.*/
     static void checkoutBranch(String branchName) {
+        // error checking
         List<String> branchNames = Utils.plainFilenamesIn(heads_DIR);
         if (!branchNames.contains(branchName)) {
             throw Utils.error("No such branch exists.");
         }
-        String currentBranch = getCurrentBranch();
-        if (currentBranch.equals(branchName)) {
+
+        String currentBranchName = getCurrentBranchName();
+        if (currentBranchName.equals(branchName)) {
             throw Utils.error("No need to checkout the current branch.");
         }
-        //
+        Commit targetCommit = getCommitFromBranch(branchName);
+        HashMap<String,String> targetMap = targetCommit.getFiles();
 
         Commit currentCommit = getCurCommit();
         HashMap<String, String> commitMap = currentCommit.getFiles();
         HashMap<String, String> stagingMap = readObjectFromIndex();
+        HashMap<String, String> working_DIR_files = getWorkingDirFiles();
+        // check untracked files that would be overwritten
+        for (String fileName : working_DIR_files.keySet()) {
+            if (!stagingMap.containsKey(fileName) && !commitMap.containsKey(fileName)
+                    && targetMap.containsKey(fileName)) {
+                throw Utils.error("There is an untracked file in the way; " +
+                        "delete it, or add and commit it first.");
+            }
+        }
+
+        checkoutCommit(targetCommit);
+
+        String HEADcontent = "ref: refs/heads/" + branchName;
+        Utils.writeContents(HEAD_FILE, HEADcontent);
+    }
+
+    /**A helper method for checkout branch and reset.
+     * It overwrites the working dir and cleans the staging area.
+     * ps. HEAD updating is not handled here!*/
+    private static void checkoutCommit(Commit targetCommit) {
+        HashMap<String,String> targetMap = targetCommit.getFiles();
+        HashMap<String, String> working_DIR_files = getWorkingDirFiles();
+
+        // copy files in the target commit into working dir
+        for (Map.Entry<String, String> entry: targetMap.entrySet()) {
+            String fileName = entry.getKey();
+            String blobID = entry.getValue();
+            if (working_DIR_files.containsKey(fileName)) {
+                if (!blobID.equals(working_DIR_files.get(fileName))) {
+                    Blob.copyContentToFile(fileName, blobID);
+                }
+            } else {
+                Blob.copyContentToFile(fileName, blobID);
+            }
+        }
+        // delete files tracked by current commit but not the target commit
+        Commit currentCommit = getCurCommit();
+        HashMap<String, String> commitMap = currentCommit.getFiles();
+        for (String fileName: commitMap.keySet()) {
+            if (!targetMap.containsKey(fileName)) {
+                File file = Utils.join(CWD, fileName);
+                Utils.restrictedDelete(file);
+            }
+        }
+
+        HashMap<String, String> stagingMap = new HashMap<>();
+        writeObjectIntoIndex(stagingMap);
+
+    }
+
+
+    /* A helper method that returns the pointed commit in a branch
+    given by the name of the branch. */
+    private static Commit getCommitFromBranch(String branchName) {
+        File head_FILE = Utils.join(heads_DIR, branchName);
+        String commitID = readContentsAsString(head_FILE);
+        Commit targetCommit = Commit.load(commitID);
+        return targetCommit;
+    }
+
+    /**A helper method that turns all the files in the current working directory,
+     * in fileName-blob pair hash map. */
+    private static HashMap<String, String> getWorkingDirFiles() {
         List<String> CWD_files = Utils.plainFilenamesIn(CWD);
         HashMap<String, String> working_DIR_files = new HashMap<>();
         for (String fileName: CWD_files) {
@@ -425,25 +479,12 @@ public class Repository {
                 working_DIR_files.put(fileName, blobID);
             }
         }
-        // check untracked files
-        for (String fileName: working_DIR_files.keySet()) {
-            if (!stagingMap.containsKey(fileName) && !commitMap.containsKey(fileName)) {
-                throw Utils.error("There is an untracked file in the way; " +
-                        "delete it, or add and commit it first.");
-            }
-        }
-
-
-
-
-
+        return working_DIR_files;
     }
 
 
-    private static Commit getCurCommit() {
-        return Commit.readCommitFromFile(getHEADcommitID());
-    }
-
+    /**A helper method that updates HEAD and branch pointer after
+     * making a new commit.*/
     private static void updatePointers(String newCommitID) {
         String HEADcontent = Utils.readContentsAsString(HEAD_FILE);
         if (HEADcontent.length() < 6) {
@@ -461,6 +502,10 @@ public class Repository {
         }
     }
 
+    /**A helper method that returns the commit pointed by HEAD.*/
+    private static Commit getCurCommit() {
+        return Commit.load(getHEADcommitID());
+    }
 
     /* This is a helper method to get the commit ID pointed by the HEAD.*/
     private static String getHEADcommitID() {
@@ -479,6 +524,7 @@ public class Repository {
             return HEADcontent;
         }
     }
+
 
     /* Methods related to staging area. */
 

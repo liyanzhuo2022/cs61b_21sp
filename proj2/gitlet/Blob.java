@@ -32,9 +32,13 @@ public class Blob implements Serializable {
         return this.hashID;
     }
 
+    byte[] getContent() {
+        return this.content;
+    }
+
     /**Persistence: a method that writes the blob object into file,
      * in the subdirectory by its first 2 id numbers - Hash Table. */
-    void writeBlobIntoFile() {
+    void save() {
         if (this.hashID == null || hashID.length() < 2) {
             throw Utils.error("HashID of the blob is shorter than 2.");
         }
@@ -51,7 +55,7 @@ public class Blob implements Serializable {
     /**Persistence: Given the blob ID, this method returns the blob object
      * read from the files. It enters the subdirectory first, as the blobs
      * distribute as in a hash table. */
-    static Blob readBlobFromFile(String blobID) {
+    static Blob load(String blobID) {
         String firstTwoID = blobID.substring(0,2);
         File subDir = Utils.join(BLOB_DIR, firstTwoID);
         if (subDir.exists() && subDir.isDirectory()) {
@@ -61,5 +65,11 @@ public class Blob implements Serializable {
         } else {
             throw Utils.error("Can't find the subdirectory of the blob: "+ blobID);
         }
+    }
+
+    static void copyContentToFile(String fileName, String blobID) {
+        Blob blob = Blob.load(blobID);
+        File target_FILE = Utils.join(Repository.CWD, fileName);
+        Utils.writeContents(target_FILE, blob.getContent());
     }
 }
