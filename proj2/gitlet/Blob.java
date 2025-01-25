@@ -20,8 +20,6 @@ public class Blob implements Serializable {
     private String hashID;
     private byte[] content;
 
-    /* TODO: fill in the rest of the class. */
-
     /* constructor of the Blob class */
     Blob(File file) {
         this.content = Utils.readContents(file);
@@ -43,37 +41,31 @@ public class Blob implements Serializable {
             System.out.println("HashID of the blob is shorter than 2.");
             System.exit(0);
         }
-        String firstTwoID = this.hashID.substring(0,2);
+        String firstTwoID = this.hashID.substring(0, 2);
         File subDir = Utils.join(BLOB_DIR, firstTwoID);
-        subDir.mkdir(); // mkdir() will check whether the dir exists
-        File blob_FILE = Utils.join(subDir, this.hashID);
-        /**
-        if (blob_FILE.exists()) {
-            System.out.println("Same blob file already exists.");
-            System.exit(0);
-        }
-         */
-        Utils.writeObject(blob_FILE, this);
+        subDir.mkdir();
+        File blobFile = Utils.join(subDir, this.hashID);
+        Utils.writeObject(blobFile, this);
     }
 
     /**Persistence: Given the blob ID, this method returns the blob object
      * read from the files. It enters the subdirectory first, as the blobs
      * distribute as in a hash table. */
     static Blob load(String blobID) {
-        String firstTwoID = blobID.substring(0,2);
+        String firstTwoID = blobID.substring(0, 2);
         File subDir = Utils.join(BLOB_DIR, firstTwoID);
         if (subDir.exists() && subDir.isDirectory()) {
-            File blob_FILE = Utils.join(subDir, blobID);
-            Blob blob = Utils.readObject(blob_FILE, Blob.class);
+            File blobFile = Utils.join(subDir, blobID);
+            Blob blob = Utils.readObject(blobFile, Blob.class);
             return blob;
         } else {
-            throw Utils.error("Can't find the subdirectory of the blob: "+ blobID);
+            throw Utils.error("Can't find the subdirectory of the blob: " + blobID);
         }
     }
 
     static void copyContentToFile(String fileName, String blobID) {
         Blob blob = Blob.load(blobID);
-        File target_FILE = Utils.join(Repository.CWD, fileName);
-        Utils.writeContents(target_FILE, blob.getContent());
+        File targetFile = Utils.join(Repository.CWD, fileName);
+        Utils.writeContents(targetFile, blob.getContent());
     }
 }

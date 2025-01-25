@@ -7,6 +7,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /** Represents a gitlet commit object.
@@ -57,8 +58,8 @@ public class Commit implements Serializable {
             this.timestamp = 0L;
             this.hashID = this.generateHashID();
         } else {
-            System.out.println("This constructor is solely for initial commit. " +
-                    "More information about this commit needed.");
+            System.out.println("This constructor is solely for initial commit. "
+                    + "More information about this commit needed.");
             System.exit(0);
         }
     }
@@ -70,7 +71,7 @@ public class Commit implements Serializable {
         this.firstParentID = curCommit.hashID;
 
         this.files = new HashMap<>(curCommit.files); // shallow copy, for kv are String
-        HashMap<String,String> stagingFiles = Repository.readObjectFromIndex();
+        HashMap<String, String> stagingFiles = Repository.readObjectFromIndex();
         if (stagingFiles.isEmpty()) {
             System.out.println("No changes added to the commit.");
             System.exit(0);
@@ -92,8 +93,8 @@ public class Commit implements Serializable {
     }
 
     HashMap<String, String> getFiles() {
-        HashMap<String, String> files = new HashMap<>(this.files);
-        return files;
+        HashMap<String, String> copiedFiles = new HashMap<>(this.files);
+        return copiedFiles;
     }
 
     String getFirstParentID() {
@@ -113,20 +114,20 @@ public class Commit implements Serializable {
         String commitID = "commit " + this.hashID;
         String merge = "";
         if (this.secondParentID != null) {
-            String firstParentID_short = firstParentID.substring(0,6);
-            String secondParentID_short = secondParentID.substring(0,6);
-            merge = "Merge: " + firstParentID_short + " " + secondParentID_short;
+            String firstParentIDshort = firstParentID.substring(0, 6);
+            String secondParentIDshort = secondParentID.substring(0, 6);
+            merge = "Merge: " + firstParentIDshort + " " + secondParentIDshort;
         }
         String date = this.formatTimeStamp();
 
         StringBuilder logBuilder = new StringBuilder();
-        logBuilder.append(entry).append("\n")
-                .append(commitID).append("\n");
+        logBuilder.append(entry).append("\n").
+                append(commitID).append("\n");
         if (!merge.isEmpty()) {
             logBuilder.append(merge).append("\n");
         }
-        logBuilder.append(date).append("\n")
-                .append(this.message).append("\n\n");
+        logBuilder.append(date).append("\n").
+                append(this.message).append("\n\n");
 
         return logBuilder.toString();
     }
@@ -135,30 +136,56 @@ public class Commit implements Serializable {
      * in the subdirectory by its first 2 id numbers - Hash Table. */
     void save() {
         if (this.hashID == null || hashID.length() < 2) {
-           System.out.println("HashID of the commit is shorter than 2.");
-           System.exit(0);
+            System.out.println("HashID of the commit is shorter than 2.");
+            System.exit(0);
         }
-        String firstTwoID = this.hashID.substring(0,2);
+        String firstTwoID = this.hashID.substring(0, 2);
         File subDir = Utils.join(COMMIT_DIR, firstTwoID);
         subDir.mkdir(); // mkdir() will check whether the dir exists
-        File commit_FILE = Utils.join(subDir, this.hashID); // the commit file use hashID as file name
-        if (commit_FILE.exists()) {
+        File commitFile = Utils.join(subDir, this.hashID); // the commit file use hashID as file name
+        if (commitFile.exists()) {
             System.out.println("Same commit file already exists.");
             System.exit(0);
         }
-        Utils.writeObject(commit_FILE, this);
+        Utils.writeObject(commitFile, this);
     }
 
     /**Persistence: Given the commit ID, this method returns the commit object
      * read from the files. It enters the subdirectory first, as the commits
-     * distribute as in a hash table. */
+     * distribute as in a hash table.
+     * prefix match: allow prefix >= 4*/
     static Commit load(String commitID) {
-        String firstTwoID = commitID.substring(0,2);
+        String firstTwoID = commitID.substring(0, 2);
         File subDir = Utils.join(COMMIT_DIR, firstTwoID);
         if (subDir.exists() && subDir.isDirectory()) {
-            File commit_FILE = Utils.join(subDir, commitID);
-            Commit commit = Utils.readObject(commit_FILE, Commit.class);
-            return commit;
+            if (commitID.length() == 40) {
+                File commitFile = Utils.join(subDir, commitID);
+                Commit commit = Utils.readObject(commitFile, Commit.class);
+                return commit;
+            } else if (commitID.length() < 4) {
+                System.out.println("Incorrect operation.");
+                System.exit(0);
+                return null;
+            } else { // prefix match
+                int matches = 0; // starts with 0 match
+                String loadID = null;
+                List<String> commitIDs = Utils.plainFilenamesIn(subDir);
+                for (String fullID : commitIDs) {
+                    if (commitID.equals(fullID.substring(0, commitID.length()))) {
+                        matches++;
+                        loadID = fullID;
+                    }
+                }
+                if (matches == 1) {
+                    File commitFile = Utils.join(subDir, loadID);
+                    Commit commit = Utils.readObject(commitFile, Commit.class);
+                    return commit;
+                } else {
+                    System.out.println("No commit with that id exists.");
+                    System.exit(0);
+                    return null;
+                }
+            }
         } else {
             System.out.println("No commit with that id exists.");
             System.exit(0);
@@ -173,8 +200,8 @@ public class Commit implements Serializable {
     }
 
     String formatTimeStamp() {
-        ZonedDateTime zonedDateTime = Instant.ofEpochSecond(timestamp)
-                .atZone(ZoneId.systemDefault());
+        ZonedDateTime zonedDateTime = Instant.ofEpochSecond(timestamp).
+                atZone(ZoneId.systemDefault());
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss yyyy Z");
         return "Date: " + zonedDateTime.format(formatter);
     }
@@ -184,16 +211,16 @@ public class Commit implements Serializable {
     private String generateHashID() {
         String timestampStr = String.valueOf(timestamp);
         String filesStr = getBlobsinString();
-        String HashID = Utils.sha1(this.message, timestampStr, filesStr);
-        return HashID;
+        String hashId = Utils.sha1(this.message, timestampStr, filesStr);
+        return hashId;
     }
 
     private String getBlobsinString() {
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> entry : this.files.entrySet()) {
             String filename = entry.getKey();
-            String hashID = entry.getValue();
-            sb.append(filename).append(":").append(hashID).append(";");
+            String blobID = entry.getValue();
+            sb.append(filename).append(":").append(blobID).append(";");
         }
         return sb.toString();
     }

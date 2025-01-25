@@ -1,7 +1,7 @@
 package gitlet;
 
 /** Driver class for Gitlet, a subset of the Git version-control system.
- *  @author TODO
+ *  @author Li Yanzhuo
  */
 public class Main {
 
@@ -19,7 +19,7 @@ public class Main {
         }
 
         String firstArg = args[0];
-        switch(firstArg) {
+        switch (firstArg) {
             case "init": {
                 Repository.init();
                 break;
@@ -44,8 +44,8 @@ public class Main {
                 }
                 String message = args[1];
 
-                if ((message.startsWith("\"") && message.endsWith("\"")) ||
-                        (message.startsWith("'") && message.endsWith("'"))) {
+                if ((message.startsWith("\"") && message.endsWith("\""))
+                        || (message.startsWith("'") && message.endsWith("'"))) {
                     message = message.substring(1, message.length() - 1);
                 }
                 Repository.commit(message);
@@ -82,8 +82,8 @@ public class Main {
                     System.exit(0);
                 }
                 String message = args[1];
-                if ((message.startsWith("\"") && message.endsWith("\"")) ||
-                        (message.startsWith("'") && message.endsWith("'"))) {
+                if ((message.startsWith("\"") && message.endsWith("\""))
+                        || (message.startsWith("'") && message.endsWith("'"))) {
                     message = message.substring(1, message.length() - 1);
                 }
                 Repository.find(message);
@@ -123,11 +123,49 @@ public class Main {
                 }
                 System.out.println("Incorrect operands.");
                 System.exit(0);
+                break;
+            }
+            case "branch": {
+                if (args.length != 2) {
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
+                    break;
+                }
+                String branchName = args[1];
+                Repository.branch(branchName);
+                break;
+            }
+            case "rm-branch": {
+                if (args.length != 2) {
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
+                    break;
+                }
+                String branchName = args[1];
+                Repository.rmBranch(branchName);
+                break;
+            }
+            case "reset": {
+                if (args.length != 2) {
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
+                    break;
+                }
+                String commitID = args[1];
+                Repository.reset(commitID);
+                break;
             }
 
-
-
             // TODO: FILL THE REST IN
+
+
+            /**
+            default: {
+                System.out.println("Incorrect operands.");
+                System.exit(0);
+                break;
+            }
+             */
         }
     }
 }
