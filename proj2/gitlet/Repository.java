@@ -637,8 +637,8 @@ public class Repository {
             givenContent = givenBlob.getContentAsString();
         }
 
-        String content = "<<<<<<< HEAD\n" + curContent + "\n=======\n"
-                + givenContent + "\n>>>>>>>\n";
+        String content = "<<<<<<< HEAD\n" + curContent + "=======\n"
+                + givenContent + ">>>>>>>\n";
         Utils.writeContents(targetFile, content);
 
         Blob targetBlob = new Blob(targetFile);

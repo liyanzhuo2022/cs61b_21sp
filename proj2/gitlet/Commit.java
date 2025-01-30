@@ -73,7 +73,9 @@ public class Commit implements Serializable {
         this.message = message;
         this.timestamp = Instant.now().getEpochSecond();
         this.firstParentID = curCommit.hashID;
-        this.secondParentID = mergeCommit.hashID;
+        if (mergeCommit != null) {
+            this.secondParentID = mergeCommit.hashID;
+        }
 
         this.files = new HashMap<>(curCommit.files); // shallow copy, for kv are String
         HashMap<String, String> stagingFiles = Repository.loadStagingArea();
