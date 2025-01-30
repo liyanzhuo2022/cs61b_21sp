@@ -80,7 +80,7 @@ public class Repository {
         writeContents(HEAD_FILE, "ref: refs/heads/master");
         // initialize staging area
         HashMap<String, String> files = new HashMap<>();
-        writeObjectIntoIndex(files);
+        saveStagingArea(files);
     }
 
     /**The java gitlet.Main add [file name] modifies the staging area(/index)
@@ -101,7 +101,7 @@ public class Repository {
         String blobID = blob.getHashID();
         String commitID = getHEADcommitID();
         Commit commit = Commit.load(commitID);
-        HashMap<String, String> stagedFile = readObjectFromIndex();
+        HashMap<String, String> stagedFile = loadStagingArea();
 
         if (commit.containsBlob(fileName, blobID)) {
             stagedFile.remove(fileName);
@@ -109,7 +109,7 @@ public class Repository {
             stagedFile.put(fileName, blobID);
             blob.save();
         }
-        writeObjectIntoIndex(stagedFile);
+        saveStagingArea(stagedFile);
     }
 
     /**The java gitlet.Main commit [message] modifies the staging area (/index)
@@ -123,7 +123,7 @@ public class Repository {
         Commit newCommit = new Commit(message, curCommit);
         newCommit.save();
         HashMap<String, String> emptyMap = new HashMap<>();
-        writeObjectIntoIndex(emptyMap);
+        saveStagingArea(emptyMap);
         updatePointers(newCommit.getCommitID());
     }
 
@@ -135,10 +135,11 @@ public class Repository {
      -- stage for removal: add the key-value pair to the staging area (a map),
      maybe assign the value as None or “REMOVE” as a label.
      [ps. the commit command will clean all the staging area after creating new commit]
-     --check if the file is in the working directory -- yes -- delete it from the working directory (using Utils)
+     --check if the file is in the working directory
+     -- yes -- delete it from the working directory (using Utils)
      3.if it is neither in staging area nor in current commit, print an error message.*/
     static void rm(String fileName) {
-        HashMap<String, String> stagingMap = readObjectFromIndex();
+        HashMap<String, String> stagingMap = loadStagingArea();
         boolean trackedByStagingArea = stagingMap.containsKey(fileName);
         if (trackedByStagingArea) {
             stagingMap.remove(fileName);
@@ -158,7 +159,7 @@ public class Repository {
             System.exit(0);
         }
 
-        writeObjectIntoIndex(stagingMap);
+        saveStagingArea(stagingMap);
     }
 
     /**Starting at the current head commit, display information about each commit
@@ -223,9 +224,20 @@ public class Repository {
     /**Displays what branches currently exist, and marks the current branch with a *.
      * Also displays what files have been staged for addition or removal.*/
     static void status() {
+        checkRepo();
         printBranches();
         printStagedAndRemovedFiles();
         printModificationsAndUntracked();
+    }
+
+    /**If a user inputs a command that requires being in an initialized Gitlet
+     * working directory (i.e., one containing a .gitlet subdirectory),
+     * but is not in such a directory*/
+    private static void checkRepo() {
+        if (!GITLET_DIR.exists() || !GITLET_DIR.isDirectory()) {
+            System.out.println("Not in an initialized Gitlet directory.");
+            System.exit(0);
+        }
     }
 
     private static void printBranches() {
@@ -271,7 +283,7 @@ public class Repository {
         TreeSet<String> stagedFiles = new TreeSet<>();
         TreeSet<String> removedFiles = new TreeSet<>();
 
-        HashMap<String, String> stagingMap = readObjectFromIndex();
+        HashMap<String, String> stagingMap = loadStagingArea();
         if (stagingMap != null) {
             for (Map.Entry<String, String> entry: stagingMap.entrySet()) {
                 String fileName = entry.getKey();
@@ -304,7 +316,7 @@ public class Repository {
     private static void printModificationsAndUntracked() {
         Commit currentCommit = getCurCommit();
         HashMap<String, String> commitMap = currentCommit.getFiles();
-        HashMap<String, String> stagingMap = readObjectFromIndex();
+        HashMap<String, String> stagingMap = loadStagingArea();
         HashMap<String, String> workingDirFiles = getWorkingDirFiles();
 
         TreeSet<String> modifiedFiles = new TreeSet<>();
@@ -318,7 +330,8 @@ public class Repository {
                     && !stagingMap.containsKey(fileName)) {
                 modifiedFiles.add(fileName + " (modified)");
             }
-            // Not staged for removal, but tracked in the current commit and deleted from the working directory.
+            // Not staged for removal, but tracked in the current commit
+            // and deleted from the working directory.
             if (!workingDirFiles.containsKey(fileName)
                     && (!stagingMap.containsKey(fileName)
                     || !stagingMap.get(fileName).equals("REMOVE"))) {
@@ -433,7 +446,7 @@ public class Repository {
 
         Commit currentCommit = getCurCommit();
         HashMap<String, String> commitMap = currentCommit.getFiles();
-        HashMap<String, String> stagingMap = readObjectFromIndex();
+        HashMap<String, String> stagingMap = loadStagingArea();
         HashMap<String, String> workingDirFiles = getWorkingDirFiles();
         // check untracked files that would be overwritten
         for (String fileName : workingDirFiles.keySet()) {
@@ -478,7 +491,7 @@ public class Repository {
         }
 
         HashMap<String, String> stagingMap = new HashMap<>();
-        writeObjectIntoIndex(stagingMap);
+        saveStagingArea(stagingMap);
 
     }
 
@@ -522,6 +535,7 @@ public class Repository {
         targetBranch.delete();
     }
 
+
     /**Checks out all the files tracked by the given commit.
      * Removes tracked files that are not present in that commit.*/
     static void reset(String commitID) {
@@ -534,12 +548,120 @@ public class Repository {
         writeContents(currentBranch, commitID);
     }
 
+    /**Merge is buggy and the previous code is somehow wrong now!*/
+    static void merge(String givenBranchName) {
+        HashMap<String, String> stagingMap = loadStagingArea();
+        if (!stagingMap.isEmpty()) {
+            System.out.println("You have uncommitted changes.");
+            System.exit(0);
+        }
 
+        String currentBranchName = getCurrentBranchName();
+        Commit curCommit = getCurCommit();
+        if (currentBranchName.equals(givenBranchName)) {
+            System.out.println("Cannot merge a branch with itself.");
+            System.exit(0);
+        }
+
+        untrackedFailCase(curCommit);
+
+        Commit givenCommit = getCommitFromBranch(givenBranchName);
+        Commit splitCommit = Commit.getSplitPoint(curCommit, givenCommit);
+        if (splitCommit.equals(givenCommit)) {
+            System.out.println("Given branch is an ancestor of the current branch.");
+            return;
+        }
+        if (splitCommit.equals(curCommit)) {
+            checkoutBranch(givenBranchName);
+            System.out.println("Current branch fast-forwarded.");
+            return;
+        }
+
+        HashMap<String, String> splitMap = splitCommit.getFiles();
+        HashMap<String, String> curMap = curCommit.getFiles();
+        HashMap<String, String> givenMap = givenCommit.getFiles();
+
+        HashSet<String> allFileNames = new HashSet<>();
+        addKeysToSet(splitMap, allFileNames);
+        addKeysToSet(curMap, allFileNames);
+        addKeysToSet(givenMap, allFileNames);
+
+        boolean conflicted = false;
+        for (String fileName : allFileNames) {
+            String notExist = "null";
+            String splitID = splitMap.getOrDefault(fileName, notExist);
+            String curID = curMap.getOrDefault(fileName, notExist);
+            String givenID = givenMap.getOrDefault(fileName, notExist);
+
+            if (!splitID.equals(curID) && !splitID.equals(givenID)
+                    && !curID.equals(givenID)) {
+                conflict(fileName, curID, givenID, stagingMap);
+                conflicted = true;
+            }
+
+            if (splitID.equals(curID) && !splitID.equals(givenID)) {
+                if (givenMap.containsKey(fileName)) {
+                    checkoutFile(fileName, givenCommit);
+                    stagingMap.put(fileName, givenMap.get(fileName));
+                } else {
+                    File rmFile = Utils.join(CWD, fileName);
+                    Utils.restrictedDelete(rmFile);
+                    stagingMap.put(fileName, "REMOVE");
+                }
+            }
+        }
+
+        saveStagingArea(stagingMap);
+        commit("Merged " + givenBranchName + " into " + currentBranchName +".");
+        if (conflicted) {
+            System.out.println("Encountered a merge conflict.");
+        }
+    }
+
+    /**A helper method for merge to handle conflict cases.*/
+    private static void conflict(String fileName, String curBlobID, String givenBlobID, HashMap<String, String> stagingMap) {
+        File targetFile = Utils.join(CWD, fileName);
+
+        String curContent;
+        String givenContent;
+        if (curBlobID.equals("null")) {
+            curContent = "";
+        } else {
+            Blob curBlob = Blob.load(curBlobID);
+            curContent = curBlob.getContentAsString();
+        }
+        if (givenBlobID.equals("null")) {
+            givenContent = "";
+        } else {
+            Blob givenBlob = Blob.load(givenBlobID);
+            givenContent = givenBlob.getContentAsString();
+        }
+
+        String content = "<<<<<<< HEAD\n" + curContent + "\n=======\n"
+                + givenContent + "\n>>>>>>>\n";
+        Utils.writeContents(targetFile, content);
+
+        Blob targetBlob = new Blob(targetFile);
+        String targetID = targetBlob.getHashID();
+        targetBlob.save();
+        stagingMap.put(fileName, targetID);
+    }
+
+    /**A helper method that will add all the keys in the map into the set.*/
+    private static void addKeysToSet(HashMap<String, String> map, HashSet<String> allFileNames) {
+        for (String fileName : map.keySet()) {
+            allFileNames.add(fileName);
+        }
+    }
 
     /**A helper method that returns the pointed commit in a branch
      * given by the name of the branch. */
     private static Commit getCommitFromBranch(String branchName) {
         File headFile = Utils.join(BRANCHES_DIR, branchName);
+        if (!headFile.exists() || !headFile.isFile()) {
+            System.out.println("A branch with that name does not exist.");
+            System.exit(0);
+        }
         String commitID = readContentsAsString(headFile);
         Commit targetCommit = Commit.load(commitID);
         return targetCommit;
@@ -607,18 +729,18 @@ public class Repository {
     /* Methods related to staging area. */
 
     /** Persistence: this is a helper method for write the map object into index file. */
-    private static void writeObjectIntoIndex(HashMap<String, String> files) {
+    private static void saveStagingArea(HashMap<String, String> files) {
         writeObject(INDEX_FILE, files);
     }
 
     /** Persistence: this is a helper method for read the map object from the index file. */
-    static HashMap<String, String> readObjectFromIndex() {
+    static HashMap<String, String> loadStagingArea() {
         HashMap<String, String> files = Utils.readObject(INDEX_FILE, HashMap.class);
         return files;
     }
 
     private static boolean stagingAreaContainsBlob(String fileName, String blobID) {
-        HashMap<String, String> stagingFiles = readObjectFromIndex();
+        HashMap<String, String> stagingFiles = loadStagingArea();
         String trackedBlob = stagingFiles.get(fileName);
         return trackedBlob != null && blobID.equals(trackedBlob);
     }

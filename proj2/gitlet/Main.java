@@ -14,7 +14,7 @@ public class Main {
     public static void main(String[] args) {
         // what if args is empty?
         if (args.length == 0) {
-            System.out.println("Incorrect operands.");
+            System.out.println("Please enter a command.");
             System.exit(0);
         }
 
@@ -155,17 +155,21 @@ public class Main {
                 Repository.reset(commitID);
                 break;
             }
-
-            // TODO: FILL THE REST IN
-
-
-            /**
+            case "merge": {
+                if (args.length != 2) {
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
+                    break;
+                }
+                String givenBranchName = args[1];
+                Repository.merge(givenBranchName);
+                break;
+            }
             default: {
-                System.out.println("Incorrect operands.");
+                System.out.println("No command with that name exists.");
                 System.exit(0);
                 break;
             }
-             */
         }
     }
 }

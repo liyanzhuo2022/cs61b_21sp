@@ -6,9 +6,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /** Represents a gitlet commit object.
  *  It's a good idea to give a description here of what else this Class
@@ -36,6 +34,7 @@ public class Commit implements Serializable {
      */
 
     static final File COMMIT_DIR = Utils.join(Repository.GITLET_DIR, "commits"); // the file path
+    static final int ID_LENGTH = 40;
     private String message;
     private String hashID;
     private String firstParentID;
@@ -66,12 +65,18 @@ public class Commit implements Serializable {
 
     /* Constructor for normal commits. */
     Commit(String message, Commit curCommit) {
+        this(message, curCommit, null);
+    }
+
+    /* Constructor for merge commit*/
+    Commit(String message, Commit curCommit, Commit mergeCommit) {
         this.message = message;
         this.timestamp = Instant.now().getEpochSecond();
         this.firstParentID = curCommit.hashID;
+        this.secondParentID = mergeCommit.hashID;
 
         this.files = new HashMap<>(curCommit.files); // shallow copy, for kv are String
-        HashMap<String, String> stagingFiles = Repository.readObjectFromIndex();
+        HashMap<String, String> stagingFiles = Repository.loadStagingArea();
         if (stagingFiles.isEmpty()) {
             System.out.println("No changes added to the commit.");
             System.exit(0);
@@ -141,8 +146,8 @@ public class Commit implements Serializable {
         }
         String firstTwoID = this.hashID.substring(0, 2);
         File subDir = Utils.join(COMMIT_DIR, firstTwoID);
-        subDir.mkdir(); // mkdir() will check whether the dir exists
-        File commitFile = Utils.join(subDir, this.hashID); // the commit file use hashID as file name
+        subDir.mkdir();
+        File commitFile = Utils.join(subDir, this.hashID);
         if (commitFile.exists()) {
             System.out.println("Same commit file already exists.");
             System.exit(0);
@@ -158,7 +163,7 @@ public class Commit implements Serializable {
         String firstTwoID = commitID.substring(0, 2);
         File subDir = Utils.join(COMMIT_DIR, firstTwoID);
         if (subDir.exists() && subDir.isDirectory()) {
-            if (commitID.length() == 40) {
+            if (commitID.length() == ID_LENGTH) {
                 File commitFile = Utils.join(subDir, commitID);
                 Commit commit = Utils.readObject(commitFile, Commit.class);
                 return commit;
@@ -206,6 +211,54 @@ public class Commit implements Serializable {
         return "Date: " + zonedDateTime.format(formatter);
     }
 
+    /**A method for merge. It returns the split point aka. the latest
+     * common ancestor of the two given commits.*/
+    static Commit getSplitPoint(Commit a, Commit b) {
+        String aCommitID = a.getCommitID();
+        String bCommitID = b.getCommitID();
+
+        Queue<String> queue1 = new LinkedList<>();
+        queue1.add(aCommitID);
+        Queue<String> queue2 = new LinkedList<>();
+        queue2.add(bCommitID);
+        HashSet<String> visited = new HashSet<>();
+
+        while (!queue1.isEmpty() || !queue2.isEmpty()) {
+            // queue1
+            String curr1 = queue1.poll();
+            if (curr1 != null) {
+                Commit currentCommit1 = load(curr1);
+                if (visited.contains(curr1)) {
+                    return currentCommit1;
+                }
+                visited.add(curr1);
+                if (currentCommit1.firstParentID != null) {
+                    queue1.add(currentCommit1.firstParentID);
+                }
+                if (currentCommit1.secondParentID != null) {
+                    queue1.add(currentCommit1.secondParentID);
+                }
+            }
+            // queue2
+            String curr2 = queue2.poll();
+            if (curr2 != null) {
+                Commit currentCommit2 = load(curr2);
+                if (visited.contains(curr2)) {
+                    return currentCommit2;
+                }
+                visited.add(curr2);
+                if (currentCommit2.firstParentID != null) {
+                    queue2.add(currentCommit2.firstParentID);
+                }
+                if (currentCommit2.secondParentID != null) {
+                    queue2.add(currentCommit2.secondParentID);
+                }
+            }
+        }
+        return null;
+    }
+
+
     /**A helper method that generate the hashID of a commit.
      * files, timestamp, message distinguish commits from each other. */
     private String generateHashID() {
@@ -215,6 +268,7 @@ public class Commit implements Serializable {
         return hashId;
     }
 
+    /**A helper method for hashID generating.*/
     private String getBlobsinString() {
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> entry : this.files.entrySet()) {

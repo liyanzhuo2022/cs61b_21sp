@@ -3,6 +3,7 @@ package gitlet;
 
 import java.io.File;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 
 /**This class represents a Blob that will be stored in a file.
  * Because each blob has a unique hash ID, we will use it
@@ -32,6 +33,12 @@ public class Blob implements Serializable {
 
     byte[] getContent() {
         return this.content;
+    }
+
+    /**A helper method for merge conflict cases,
+     * not very sure how it would work. */
+    String getContentAsString() {
+        return new String(this.content, StandardCharsets.UTF_8);
     }
 
     /**Persistence: a method that writes the blob object into file,
