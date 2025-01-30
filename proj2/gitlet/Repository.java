@@ -438,9 +438,9 @@ public class Repository {
         Utils.writeContents(HEAD_FILE, headContent);
     }
 
-    /**A helper method that handles failure case:
+    /**A helper method for checkout, that handles failure case:
      * If a working file is untracked in the current branch
-     * and would be overwritten by the checkout, print...and exit*/
+     * and would be overwritten by checkout, print message and exit*/
     private static void untrackedFailCase(Commit targetCommit) {
         HashMap<String, String> targetMap = targetCommit.getFiles();
 
@@ -457,7 +457,6 @@ public class Repository {
                 System.exit(0);
             }
         }
-
     }
 
     /**A helper method for checkout branch and reset.
@@ -563,19 +562,19 @@ public class Repository {
             System.exit(0);
         }
 
-        untrackedFailCase(curCommit);
-
         Commit givenCommit = getCommitFromBranch(givenBranchName);
         Commit splitCommit = Commit.getSplitPoint(curCommit, givenCommit);
-        if (splitCommit.equals(givenCommit)) {
+        if (splitCommit.getCommitID().equals(givenCommit.getCommitID())) {
             System.out.println("Given branch is an ancestor of the current branch.");
             return;
         }
-        if (splitCommit.equals(curCommit)) {
+        if (splitCommit.getCommitID().equals(curCommit.getCommitID())) {
             checkoutBranch(givenBranchName);
             System.out.println("Current branch fast-forwarded.");
             return;
         }
+
+        untrackedFailCase(givenCommit);
 
         HashMap<String, String> splitMap = splitCommit.getFiles();
         HashMap<String, String> curMap = curCommit.getFiles();
@@ -599,6 +598,7 @@ public class Repository {
                 conflicted = true;
             }
 
+            // main logic!
             if (splitID.equals(curID) && !splitID.equals(givenID)) {
                 if (givenMap.containsKey(fileName)) {
                     checkoutFile(fileName, givenCommit);
@@ -609,17 +609,24 @@ public class Repository {
                     stagingMap.put(fileName, "REMOVE");
                 }
             }
+
+            // test 36: check whether the same name file exists in working dir
+            if (curID.equals(notExist) && givenID.equals(notExist)) {
+                File rmFile = Utils.join(CWD, fileName);
+                Utils.restrictedDelete(rmFile);
+            }
         }
 
         saveStagingArea(stagingMap);
-        commit("Merged " + givenBranchName + " into " + currentBranchName +".");
+        commit("Merged " + givenBranchName + " into " + currentBranchName + ".");
         if (conflicted) {
             System.out.println("Encountered a merge conflict.");
         }
     }
 
     /**A helper method for merge to handle conflict cases.*/
-    private static void conflict(String fileName, String curBlobID, String givenBlobID, HashMap<String, String> stagingMap) {
+    private static void conflict(String fileName, String curBlobID, String givenBlobID,
+                                 HashMap<String, String> stagingMap) {
         File targetFile = Utils.join(CWD, fileName);
 
         String curContent;
