@@ -215,6 +215,41 @@ public class Commit implements Serializable {
 
     /**A method for merge. It returns the split point aka. the latest
      * common ancestor of the two given commits.*/
+    /**From chatGPT*/
+    static Commit getSplitPoint(Commit a, Commit b) {
+        Queue<String> queue = new LinkedList<>();
+        HashMap<String, Integer> depthMap = new HashMap<>(); // 记录每个 commit 的深度
+        HashSet<String> visited = new HashSet<>();
+
+        queue.add(a.getCommitID());
+        depthMap.put(a.getCommitID(), 0);
+
+        queue.add(b.getCommitID());
+        depthMap.put(b.getCommitID(), 0);
+
+        while (!queue.isEmpty()) {
+            String currID = queue.poll();
+            if (visited.contains(currID)) {
+                return load(currID); // 找到最近的公共祖先
+            }
+
+            visited.add(currID);
+            Commit currentCommit = load(currID);
+
+            if (currentCommit.firstParentID != null) {
+                queue.add(currentCommit.firstParentID);
+                depthMap.putIfAbsent(currentCommit.firstParentID, depthMap.get(currID) + 1);
+            }
+            if (currentCommit.secondParentID != null) {
+                queue.add(currentCommit.secondParentID);
+                depthMap.putIfAbsent(currentCommit.secondParentID, depthMap.get(currID) + 1);
+            }
+        }
+        return null; // 没有公共祖先
+    }
+
+
+    /**
     static Commit getSplitPoint(Commit a, Commit b) {
         String aCommitID = a.getCommitID();
         String bCommitID = b.getCommitID();
@@ -258,7 +293,7 @@ public class Commit implements Serializable {
             }
         }
         return null;
-    }
+    } */
 
 
     /**A helper method that generate the hashID of a commit.

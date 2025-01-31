@@ -598,7 +598,6 @@ public class Repository {
                 conflicted = true;
             }
 
-            // main logic!
             if (splitID.equals(curID) && !splitID.equals(givenID)) {
                 if (givenMap.containsKey(fileName)) {
                     checkoutFile(fileName, givenCommit);
@@ -610,8 +609,9 @@ public class Repository {
                 }
             }
 
-            // test 36: check whether the same name file exists in working dir
-            if (curID.equals(notExist) && givenID.equals(notExist)) {
+            //? check whether the same name file exists in working dir
+            if ((curID.equals(notExist) && givenID.equals(notExist))
+                    || (splitID.equals(givenID) && curID.equals(notExist))) {
                 File rmFile = Utils.join(CWD, fileName);
                 Utils.restrictedDelete(rmFile);
             }
