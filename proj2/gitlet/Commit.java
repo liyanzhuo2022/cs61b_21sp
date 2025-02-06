@@ -214,42 +214,10 @@ public class Commit implements Serializable {
     }
 
     /**A method for merge. It returns the split point aka. the latest
-     * common ancestor of the two given commits.*/
-    /**From chatGPT*/
-    static Commit getSplitPoint(Commit a, Commit b) {
-        Queue<String> queue = new LinkedList<>();
-        HashMap<String, Integer> depthMap = new HashMap<>(); // 记录每个 commit 的深度
-        HashSet<String> visited = new HashSet<>();
+     * common ancestor of the two given commits
+     * in a Directed Acyclic Graph.*/
 
-        queue.add(a.getCommitID());
-        depthMap.put(a.getCommitID(), 0);
-
-        queue.add(b.getCommitID());
-        depthMap.put(b.getCommitID(), 0);
-
-        while (!queue.isEmpty()) {
-            String currID = queue.poll();
-            if (visited.contains(currID)) {
-                return load(currID); // 找到最近的公共祖先
-            }
-
-            visited.add(currID);
-            Commit currentCommit = load(currID);
-
-            if (currentCommit.firstParentID != null) {
-                queue.add(currentCommit.firstParentID);
-                depthMap.putIfAbsent(currentCommit.firstParentID, depthMap.get(currID) + 1);
-            }
-            if (currentCommit.secondParentID != null) {
-                queue.add(currentCommit.secondParentID);
-                depthMap.putIfAbsent(currentCommit.secondParentID, depthMap.get(currID) + 1);
-            }
-        }
-        return null; // 没有公共祖先
-    }
-
-
-    /**
+    /** the origin code
     static Commit getSplitPoint(Commit a, Commit b) {
         String aCommitID = a.getCommitID();
         String bCommitID = b.getCommitID();
@@ -293,7 +261,85 @@ public class Commit implements Serializable {
             }
         }
         return null;
-    } */
+    }
+    */
+
+    /**deepsick code*/
+    static Commit getSplitPoint(Commit a, Commit b) {
+        HashMap<String, Integer> ancestorsOfA = findAncestors(a);
+        HashMap<String, Integer> ancestorsOfB = findAncestors(b);
+
+        // 1. 找到所有共同祖先的commitID
+        Set<String> commonAncestorIds = new HashSet<>(ancestorsOfA.keySet());
+        commonAncestorIds.retainAll(ancestorsOfB.keySet());
+
+        if (commonAncestorIds.isEmpty()) {
+            return null; // 无共同祖先的特殊处理
+        }
+
+        // 2. 定义优先队列的排序规则
+        PriorityQueue<String> priorityQueue = new PriorityQueue<>((id1, id2) -> {
+            // 规则1: 优先选择 max(da, db) 最小的（更近的祖先）
+            int maxDepth1 = Math.max(ancestorsOfA.get(id1), ancestorsOfB.get(id1));
+            int maxDepth2 = Math.max(ancestorsOfA.get(id2), ancestorsOfB.get(id2));
+            if (maxDepth1 != maxDepth2) {
+                return Integer.compare(maxDepth1, maxDepth2); // 升序
+            }
+
+            // 规则2: 若 max 相同，选择 min(da, db) 最大的（更均衡的祖先）
+            int minDepth1 = Math.min(ancestorsOfA.get(id1), ancestorsOfB.get(id1));
+            int minDepth2 = Math.min(ancestorsOfA.get(id2), ancestorsOfB.get(id2));
+            if (minDepth1 != minDepth2) {
+                return Integer.compare(minDepth2, minDepth1); // 降序
+            }
+
+            // 规则3: 若仍相同，按 commitID 字典序（确保确定性）
+            return id1.compareTo(id2);
+        });
+
+        // 3. 将共同祖先加入优先队列
+        priorityQueue.addAll(commonAncestorIds);
+
+        // 4. 返回深度最优的共同祖先
+        return load(priorityQueue.poll());
+    }
+
+    /**This method is to find the all the ancestors of a commit,
+     * and return a map of commitIDs and their depths.*/
+    static HashMap<String, Integer> findAncestors(Commit target) {
+        HashMap<String, Integer> ancestors = new HashMap<>();
+        Queue<Commit> fringe = new LinkedList<>();
+        Set<String> visited = new HashSet<>();
+        fringe.add(target);
+        visited.add(target.getCommitID());
+
+        int depth = 0;
+        while (!fringe.isEmpty()) {
+            int fringeSize = fringe.size();
+            depth++;
+            for (int i = 0; i < fringeSize; i++) {
+                Commit node = fringe.poll();
+                Commit firstParent = (node.getFirstParentID() != null) ?
+                        load(node.getFirstParentID()) : null;
+                Commit secondParent = (node.getSecondParentID() != null) ?
+                        load(node.getSecondParentID()) : null;
+
+                if (firstParent != null && !visited.contains(firstParent.getCommitID())) {
+                    fringe.add(firstParent);
+                    ancestors.put(firstParent.getCommitID(), depth);
+                    visited.add(firstParent.getCommitID());
+                }
+
+                if (secondParent != null && !visited.contains(secondParent.getCommitID())) {
+                    fringe.add(secondParent);
+                    ancestors.put(secondParent.getCommitID(), depth);
+                    visited.add(secondParent.getCommitID());
+                }
+            }
+        }
+
+        return ancestors;
+    }
 
 
     /**A helper method that generate the hashID of a commit.

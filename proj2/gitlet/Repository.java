@@ -39,6 +39,7 @@ public class Repository {
     static final File REFS_DIR = join(GITLET_DIR, "refs");
     static final File BRANCHES_DIR = join(REFS_DIR, "heads");
     static final File MASTER_FILE = join(BRANCHES_DIR, "master");
+    static final File REMOTES_FILE = join(REFS_DIR, "remotes");
 
 
     /**The java gitlet.Main init will set up the persistence after checking errors:
@@ -61,6 +62,7 @@ public class Repository {
         BLOBS_DIR.mkdir();
         REFS_DIR.mkdir();
         BRANCHES_DIR.mkdir();
+        REMOTES_FILE.mkdir();
 
         makeInitCommit();
     }
@@ -547,7 +549,9 @@ public class Repository {
         writeContents(currentBranch, commitID);
     }
 
-    /**Merge is buggy and the previous code is somehow wrong now!*/
+    /**Merge is buggy: can't pass 36a) merge-parent2 (0/44.444),
+     * change the code for split point doesn't help with it.*/
+    // TODO: debug merge!!!
     static void merge(String givenBranchName) {
         HashMap<String, String> stagingMap = loadStagingArea();
         if (!stagingMap.isEmpty()) {
@@ -660,6 +664,9 @@ public class Repository {
             allFileNames.add(fileName);
         }
     }
+
+    // TODO: remote ec!!! REMOTE
+
 
     /**A helper method that returns the pointed commit in a branch
      * given by the name of the branch. */
