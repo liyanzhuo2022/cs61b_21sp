@@ -39,7 +39,8 @@ public class Repository {
     static final File REFS_DIR = join(GITLET_DIR, "refs");
     static final File BRANCHES_DIR = join(REFS_DIR, "heads");
     static final File MASTER_FILE = join(BRANCHES_DIR, "master");
-    static final File REMOTES_FILE = join(REFS_DIR, "remotes");
+    static final File REMOTES_BRANCHES = join(REFS_DIR, "remotes");
+    static final File REMOTES_ADDRESS = join(GITLET_DIR, "remotes");
 
 
     /**The java gitlet.Main init will set up the persistence after checking errors:
@@ -62,7 +63,8 @@ public class Repository {
         BLOBS_DIR.mkdir();
         REFS_DIR.mkdir();
         BRANCHES_DIR.mkdir();
-        REMOTES_FILE.mkdir();
+        REMOTES_BRANCHES.mkdir();
+        REMOTES_ADDRESS.mkdir();
 
         makeInitCommit();
     }
@@ -666,6 +668,36 @@ public class Repository {
     }
 
     // TODO: remote ec!!! REMOTE
+    /** Saves the given login information under the given remote name. */
+    static void addRemote(String remoteName, String remoteDirPath) {
+        List<String> allRemoteNames = plainFilenamesIn(REMOTES_ADDRESS);
+        if (allRemoteNames.contains(remoteName)) {
+            System.out.println("A remote with that name already exists.");
+            System.exit(0);
+        }
+
+        String formattedPath = remoteDirPath.replace("/", File.separator);
+        File newRemote = join(REMOTES_ADDRESS, remoteName);
+        writeContents(newRemote, formattedPath);
+    }
+
+    /** Remove information associated with the given remote name. */
+    static void rmRemote(String remoteName) {
+        List<String> allRemoteNames = plainFilenamesIn(REMOTES_ADDRESS);
+        if (!allRemoteNames.contains(remoteName)) {
+            System.out.println("A remote with that name does not exist.");
+            System.exit(0);
+        }
+
+        File toDelete = join(REMOTES_ADDRESS, remoteName);
+        restrictedDelete(toDelete);
+    }
+
+
+
+
+
+
 
 
     /**A helper method that returns the pointed commit in a branch

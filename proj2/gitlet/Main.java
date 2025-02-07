@@ -165,6 +165,28 @@ public class Main {
                 Repository.merge(givenBranchName);
                 break;
             }
+            case "add-remote":{
+                if (args.length != 3) {
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
+                    break;
+                }
+                String remoteName = args[1];
+                String remoteDirPath = args[2];
+                Repository.addRemote(remoteName, remoteDirPath);
+                break;
+            }
+            case "rm-remote": {
+                if (args.length != 2) {
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
+                    break;
+                }
+                String remoteName = args[1];
+                Repository.rmRemote(remoteName);
+                break;
+            }
+
             default: {
                 System.out.println("No command with that name exists.");
                 System.exit(0);

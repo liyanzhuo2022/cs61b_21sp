@@ -216,8 +216,8 @@ public class Commit implements Serializable {
     /**A method for merge. It returns the split point aka. the latest
      * common ancestor of the two given commits
      * in a Directed Acyclic Graph.*/
-
-    /** the origin code
+    // the origin code is potentially buggy, but weirdly it passes most of the tests???!!!
+    /**
     static Commit getSplitPoint(Commit a, Commit b) {
         String aCommitID = a.getCommitID();
         String bCommitID = b.getCommitID();
@@ -262,46 +262,22 @@ public class Commit implements Serializable {
         }
         return null;
     }
-    */
+     */
 
-    /**deepsick code*/
     static Commit getSplitPoint(Commit a, Commit b) {
         HashMap<String, Integer> ancestorsOfA = findAncestors(a);
         HashMap<String, Integer> ancestorsOfB = findAncestors(b);
 
-        // 1. 找到所有共同祖先的commitID
-        Set<String> commonAncestorIds = new HashSet<>(ancestorsOfA.keySet());
-        commonAncestorIds.retainAll(ancestorsOfB.keySet());
-
-        if (commonAncestorIds.isEmpty()) {
-            return null; // 无共同祖先的特殊处理
+        String minKey = null;
+        int minValue = Integer.MAX_VALUE;
+        for (String commitID: ancestorsOfA.keySet()) {
+            if (ancestorsOfB.containsKey(commitID)
+                    && ancestorsOfA.get(commitID) < minValue) {
+                minKey = commitID;
+                minValue = ancestorsOfA.get(commitID);
+            }
         }
-
-        // 2. 定义优先队列的排序规则
-        PriorityQueue<String> priorityQueue = new PriorityQueue<>((id1, id2) -> {
-            // 规则1: 优先选择 max(da, db) 最小的（更近的祖先）
-            int maxDepth1 = Math.max(ancestorsOfA.get(id1), ancestorsOfB.get(id1));
-            int maxDepth2 = Math.max(ancestorsOfA.get(id2), ancestorsOfB.get(id2));
-            if (maxDepth1 != maxDepth2) {
-                return Integer.compare(maxDepth1, maxDepth2); // 升序
-            }
-
-            // 规则2: 若 max 相同，选择 min(da, db) 最大的（更均衡的祖先）
-            int minDepth1 = Math.min(ancestorsOfA.get(id1), ancestorsOfB.get(id1));
-            int minDepth2 = Math.min(ancestorsOfA.get(id2), ancestorsOfB.get(id2));
-            if (minDepth1 != minDepth2) {
-                return Integer.compare(minDepth2, minDepth1); // 降序
-            }
-
-            // 规则3: 若仍相同，按 commitID 字典序（确保确定性）
-            return id1.compareTo(id2);
-        });
-
-        // 3. 将共同祖先加入优先队列
-        priorityQueue.addAll(commonAncestorIds);
-
-        // 4. 返回深度最优的共同祖先
-        return load(priorityQueue.poll());
+        return load(minKey);
     }
 
     /**This method is to find the all the ancestors of a commit,
@@ -310,6 +286,7 @@ public class Commit implements Serializable {
         HashMap<String, Integer> ancestors = new HashMap<>();
         Queue<Commit> fringe = new LinkedList<>();
         Set<String> visited = new HashSet<>();
+        ancestors.put(target.getCommitID(), 0); // test 40
         fringe.add(target);
         visited.add(target.getCommitID());
 
@@ -319,10 +296,10 @@ public class Commit implements Serializable {
             depth++;
             for (int i = 0; i < fringeSize; i++) {
                 Commit node = fringe.poll();
-                Commit firstParent = (node.getFirstParentID() != null) ?
-                        load(node.getFirstParentID()) : null;
-                Commit secondParent = (node.getSecondParentID() != null) ?
-                        load(node.getSecondParentID()) : null;
+                Commit firstParent = (node.getFirstParentID() != null)
+                        ? load(node.getFirstParentID()) : null;
+                Commit secondParent = (node.getSecondParentID() != null)
+                        ? load(node.getSecondParentID()) : null;
 
                 if (firstParent != null && !visited.contains(firstParent.getCommitID())) {
                     fringe.add(firstParent);
