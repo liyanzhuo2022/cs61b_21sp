@@ -553,7 +553,7 @@ public class Repository {
 
     /**Merge is buggy: can't pass 36a) merge-parent2 (0/44.444),
      * change the code for split point doesn't help with it.*/
-    // TODO: debug merge!!!
+    // debug merge!!!
     static void merge(String givenBranchName) {
         HashMap<String, String> stagingMap = loadStagingArea();
         if (!stagingMap.isEmpty()) {
@@ -597,6 +597,12 @@ public class Repository {
             String splitID = splitMap.getOrDefault(fileName, notExist);
             String curID = curMap.getOrDefault(fileName, notExist);
             String givenID = givenMap.getOrDefault(fileName, notExist);
+
+            // try to debug 36a): Skip restoring files that were deleted in current after a prior merge
+            if (splitID.equals(givenID) && !splitID.equals(notExist) && curID.equals(notExist)) {
+                continue;
+            }
+
 
             if (!splitID.equals(curID) && !splitID.equals(givenID)
                     && !curID.equals(givenID)) {
@@ -667,7 +673,7 @@ public class Repository {
         }
     }
 
-    // TODO: remote ec!!! REMOTE
+    // remote ec!!! REMOTE
     /** Saves the given login information under the given remote name. */
     static void addRemote(String remoteName, String remoteDirPath) {
         List<String> allRemoteNames = plainFilenamesIn(REMOTES_ADDRESS);
