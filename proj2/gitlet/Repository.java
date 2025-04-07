@@ -598,11 +598,6 @@ public class Repository {
             String curID = curMap.getOrDefault(fileName, notExist);
             String givenID = givenMap.getOrDefault(fileName, notExist);
 
-            // try to debug 36a): Skip restoring files that were deleted in current after a prior merge
-            if (!splitID.equals(notExist) && splitID.equals(givenID) && curID.equals(notExist)) {
-                continue;
-            }
-
             if (!splitID.equals(curID) && !splitID.equals(givenID)
                     && !curID.equals(givenID)) {
                 conflict(fileName, curID, givenID, stagingMap);

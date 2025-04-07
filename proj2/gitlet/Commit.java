@@ -282,11 +282,12 @@ public class Commit implements Serializable {
 
     /**This method is to find the all the ancestors of a commit,
      * and return a map of commitIDs and their depths.*/
+    /**
     static HashMap<String, Integer> findAncestors(Commit target) {
         HashMap<String, Integer> ancestors = new HashMap<>();
         Queue<Commit> fringe = new LinkedList<>();
         Set<String> visited = new HashSet<>();
-        ancestors.put(target.getCommitID(), 0); // test 40
+        ancestors.put(target.getCommitID(), 0);
         fringe.add(target);
         visited.add(target.getCommitID());
 
@@ -317,6 +318,45 @@ public class Commit implements Serializable {
 
         return ancestors;
     }
+    */
+
+    static HashMap<String, Integer> findAncestors(Commit target) {
+        HashMap<String, Integer> ancestors = new HashMap<>();
+        Queue<Commit> fringe = new LinkedList<>();
+        // 改用 Map 记录每个节点的深度（更精确）
+        Map<String, Integer> commitDepth = new HashMap<>();
+
+        fringe.add(target);
+        commitDepth.put(target.getCommitID(), 0);
+
+        while (!fringe.isEmpty()) {
+            Commit node = fringe.poll();
+            int currentDepth = commitDepth.get(node.getCommitID());
+
+            // 处理第一个父节点
+            if (node.getFirstParentID() != null) {
+                Commit firstParent = load(node.getFirstParentID());
+                if (!commitDepth.containsKey(firstParent.getCommitID())) {
+                    commitDepth.put(firstParent.getCommitID(), currentDepth + 1);
+                    fringe.add(firstParent);
+                }
+            }
+
+            // 处理第二个父节点（合并提交）
+            if (node.getSecondParentID() != null) {
+                Commit secondParent = load(node.getSecondParentID());
+                if (!commitDepth.containsKey(secondParent.getCommitID())) {
+                    commitDepth.put(secondParent.getCommitID(), currentDepth + 1);
+                    fringe.add(secondParent);
+                }
+            }
+        }
+
+        // 转换格式以保持兼容
+        ancestors.putAll(commitDepth);
+        return ancestors;
+    }
+
 
 
     /**A helper method that generate the hashID of a commit.
