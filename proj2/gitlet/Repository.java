@@ -694,12 +694,6 @@ public class Repository {
     }
 
 
-
-
-
-
-
-
     /**A helper method that returns the pointed commit in a branch
      * given by the name of the branch. */
     private static Commit getCommitFromBranch(String branchName) {

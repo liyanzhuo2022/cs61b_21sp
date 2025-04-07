@@ -216,8 +216,7 @@ public class Commit implements Serializable {
     /**A method for merge. It returns the split point aka. the latest
      * common ancestor of the two given commits
      * in a Directed Acyclic Graph.*/
-    // the origin code is potentially buggy, but weirdly it passes most of the tests???!!!
-    /**
+
     static Commit getSplitPoint(Commit a, Commit b) {
         String aCommitID = a.getCommitID();
         String bCommitID = b.getCommitID();
@@ -262,8 +261,8 @@ public class Commit implements Serializable {
         }
         return null;
     }
-     */
 
+    /**
     static Commit getSplitPoint(Commit a, Commit b) {
         HashMap<String, Integer> ancestorsOfA = findAncestors(a);
         HashMap<String, Integer> ancestorsOfB = findAncestors(b);
@@ -280,9 +279,6 @@ public class Commit implements Serializable {
         return load(minKey);
     }
 
-    /**This method is to find the all the ancestors of a commit,
-     * and return a map of commitIDs and their depths.*/
-    /**
     static HashMap<String, Integer> findAncestors(Commit target) {
         HashMap<String, Integer> ancestors = new HashMap<>();
         Queue<Commit> fringe = new LinkedList<>();
@@ -318,46 +314,7 @@ public class Commit implements Serializable {
 
         return ancestors;
     }
-    */
-
-    static HashMap<String, Integer> findAncestors(Commit target) {
-        HashMap<String, Integer> ancestors = new HashMap<>();
-        Queue<Commit> fringe = new LinkedList<>();
-        // 改用 Map 记录每个节点的深度（更精确）
-        Map<String, Integer> commitDepth = new HashMap<>();
-
-        fringe.add(target);
-        commitDepth.put(target.getCommitID(), 0);
-
-        while (!fringe.isEmpty()) {
-            Commit node = fringe.poll();
-            int currentDepth = commitDepth.get(node.getCommitID());
-
-            // 处理第一个父节点
-            if (node.getFirstParentID() != null) {
-                Commit firstParent = load(node.getFirstParentID());
-                if (!commitDepth.containsKey(firstParent.getCommitID())) {
-                    commitDepth.put(firstParent.getCommitID(), currentDepth + 1);
-                    fringe.add(firstParent);
-                }
-            }
-
-            // 处理第二个父节点（合并提交）
-            if (node.getSecondParentID() != null) {
-                Commit secondParent = load(node.getSecondParentID());
-                if (!commitDepth.containsKey(secondParent.getCommitID())) {
-                    commitDepth.put(secondParent.getCommitID(), currentDepth + 1);
-                    fringe.add(secondParent);
-                }
-            }
-        }
-
-        // 转换格式以保持兼容
-        ancestors.putAll(commitDepth);
-        return ancestors;
-    }
-
-
+     */
 
     /**A helper method that generate the hashID of a commit.
      * files, timestamp, message distinguish commits from each other. */
