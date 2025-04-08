@@ -121,8 +121,8 @@ public class Commit implements Serializable {
         String commitID = "commit " + this.hashID;
         String merge = "";
         if (this.secondParentID != null) {
-            String firstParentIDshort = firstParentID.substring(0, 6);
-            String secondParentIDshort = secondParentID.substring(0, 6);
+            String firstParentIDshort = firstParentID.substring(0, 7);
+            String secondParentIDshort = secondParentID.substring(0, 7);
             merge = "Merge: " + firstParentIDshort + " " + secondParentIDshort;
         }
         String date = this.formatTimeStamp();

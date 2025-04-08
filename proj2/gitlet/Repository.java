@@ -632,7 +632,6 @@ public class Repository {
         saveStagingArea(stagingMap);
         commit("Merged " + givenBranchName + " into "
                 + currentBranchName + ".", givenCommit);
-
         if (conflicted) {
             System.out.println("Encountered a merge conflict.");
         }
