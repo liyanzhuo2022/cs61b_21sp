@@ -262,60 +262,6 @@ public class Commit implements Serializable {
         return null;
     }
 
-    /**
-    static Commit getSplitPoint(Commit a, Commit b) {
-        HashMap<String, Integer> ancestorsOfA = findAncestors(a);
-        HashMap<String, Integer> ancestorsOfB = findAncestors(b);
-
-        String minKey = null;
-        int minValue = Integer.MAX_VALUE;
-        for (String commitID: ancestorsOfA.keySet()) {
-            if (ancestorsOfB.containsKey(commitID)
-                    && ancestorsOfA.get(commitID) < minValue) {
-                minKey = commitID;
-                minValue = ancestorsOfA.get(commitID);
-            }
-        }
-        return load(minKey);
-    }
-
-    static HashMap<String, Integer> findAncestors(Commit target) {
-        HashMap<String, Integer> ancestors = new HashMap<>();
-        Queue<Commit> fringe = new LinkedList<>();
-        Set<String> visited = new HashSet<>();
-        ancestors.put(target.getCommitID(), 0);
-        fringe.add(target);
-        visited.add(target.getCommitID());
-
-        int depth = 0;
-        while (!fringe.isEmpty()) {
-            int fringeSize = fringe.size();
-            depth++;
-            for (int i = 0; i < fringeSize; i++) {
-                Commit node = fringe.poll();
-                Commit firstParent = (node.getFirstParentID() != null)
-                        ? load(node.getFirstParentID()) : null;
-                Commit secondParent = (node.getSecondParentID() != null)
-                        ? load(node.getSecondParentID()) : null;
-
-                if (firstParent != null && !visited.contains(firstParent.getCommitID())) {
-                    fringe.add(firstParent);
-                    ancestors.put(firstParent.getCommitID(), depth);
-                    visited.add(firstParent.getCommitID());
-                }
-
-                if (secondParent != null && !visited.contains(secondParent.getCommitID())) {
-                    fringe.add(secondParent);
-                    ancestors.put(secondParent.getCommitID(), depth);
-                    visited.add(secondParent.getCommitID());
-                }
-            }
-        }
-
-        return ancestors;
-    }
-     */
-
     /**A helper method that generate the hashID of a commit.
      * files, timestamp, message distinguish commits from each other. */
     private String generateHashID() {

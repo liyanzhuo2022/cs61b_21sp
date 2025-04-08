@@ -131,6 +131,15 @@ public class Repository {
         updatePointers(newCommit.getCommitID());
     }
 
+    static void commit(String message, Commit mergeCommit) {
+        Commit curCommit = Commit.load(getHEADcommitID());
+        Commit newCommit = new Commit(message, curCommit, mergeCommit);
+        newCommit.save();
+        HashMap<String, String> emptyMap = new HashMap<>();
+        saveStagingArea(emptyMap);
+        updatePointers(newCommit.getCommitID());
+    }
+
     /**The java gitlet.Main rm [file name] modifies the staging area,
      * /commit and the working directory.
      1.check if the file is in staging area -- yes -- unstage the file:
@@ -551,9 +560,6 @@ public class Repository {
         writeContents(currentBranch, commitID);
     }
 
-    /**Merge is buggy: can't pass 36a) merge-parent2 (0/44.444),
-     * change the code for split point doesn't help with it.*/
-    // debug merge!!!
     static void merge(String givenBranchName) {
         HashMap<String, String> stagingMap = loadStagingArea();
         if (!stagingMap.isEmpty()) {
@@ -624,7 +630,9 @@ public class Repository {
         }
 
         saveStagingArea(stagingMap);
-        commit("Merged " + givenBranchName + " into " + currentBranchName + ".");
+        commit("Merged " + givenBranchName + " into "
+                + currentBranchName + ".", givenCommit);
+
         if (conflicted) {
             System.out.println("Encountered a merge conflict.");
         }
